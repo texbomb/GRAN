@@ -165,7 +165,14 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
     graphs = []
     for i in range(10, 20):
       for j in range(10, 20):
-        graphs.append(nx.grid_2d_graph(i, j))    
+        graphs.append(nx.grid_2d_graph(i, j))
+  # Added graph for an ektra small grid to train on
+  elif graph_type == 'small_grid':
+    graphs = []
+    for i in range(3, 9):
+      for j in range(3, 9):
+        graphs.append(nx.grid_2d_graph(i, j))
+
   elif graph_type == 'lobster':
     graphs = []
     p1 = 0.7
