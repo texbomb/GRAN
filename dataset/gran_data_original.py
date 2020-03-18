@@ -10,7 +10,8 @@ from collections import defaultdict
 import torch.nn.functional as F
 from utils.data_helper import *
 
-class GRANDataDev(object):
+
+class GRANData(object):
 
   def __init__(self, config, graphs, tag='train'):
     self.config = config
@@ -79,15 +80,6 @@ class GRANDataDev(object):
 
     node_list_bfs = []
     node_list_dfs = []
-
-    # //Oliver lists for x and y coordinates with BFS/DFS
-
-    node_x_list_bfs = []
-    node_y_list_bfs = []
-
-    node_x_list_dfs = []
-    node_y_list_dfs = []
-
     for ii in range(len(CGs)):
       node_degree_list = [(n, d) for n, d in CGs[ii].degree()]
       degree_sequence = sorted(
@@ -98,16 +90,6 @@ class GRANDataDev(object):
 
       node_list_bfs += list(bfs_tree.nodes())
       node_list_dfs += list(dfs_tree.nodes())
-
-    # Appends x and y data ind the order of the BFS/DFS
-
-    for i in range(len(node_list_bfs)):
-      node_x_list_bfs.append(G.nodes(data=True)[node_list_bfs[i]]["x"])
-      node_y_list_bfs.append(G.nodes(data=True)[node_list_bfs[i]]["y"])
-
-    for i in range(len(node_list_dfs)):
-      node_x_list_dfs.append(G.nodes(data=True)[node_list_dfs[i]]["x"])
-      node_y_list_dfs.append(G.nodes(data=True)[node_list_dfs[i]]["y"])
 
     adj_3 = np.array(nx.to_numpy_matrix(G, nodelist=node_list_bfs))
     adj_4 = np.array(nx.to_numpy_matrix(G, nodelist=node_list_dfs))
@@ -139,12 +121,8 @@ class GRANDataDev(object):
         adj_list = [adj_2]
       elif self.node_order == 'BFS':
         adj_list = [adj_3]
-        x_pos = np.array(node_x_list_bfs)
-        y_pos = np.array(node_y_list_bfs)
       elif self.node_order == 'DFS':
         adj_list = [adj_4]
-        x_pos = np.array(node_x_list_dfs)
-        y_pos = np.array(node_y_list_dfs)
       elif self.node_order == 'k_core':
         adj_list = [adj_5]
       elif self.node_order == 'DFS+BFS':
@@ -160,29 +138,14 @@ class GRANDataDev(object):
 
     # print('number of nodes = {}'.format(adj_0.shape[0]))
 
-    # Returns a dict with the adj list and positions 
-
-    graph = {
-      "adj_list": adj_list, 
-      "x_pos": x_pos,
-      "y_pos": y_pos
-    }
-
-    return graph
+    return adj_list
 
   def __getitem__(self, index):
     K = self.block_size
     N = self.max_num_nodes
     S = self.stride
 
-    # load graph and inputs variables
-
-    graph = pickle.load(open(self.file_names[index], 'rb'))
-
-    adj_list = graph["adj_list"]
-    x_pos = graph["x_pos"]
-    y_pos = graph["y_pos"]
-
+    # load graph
     adj_list = pickle.load(open(self.file_names[index], 'rb'))
     num_nodes = adj_list[0].shape[0]
     num_subgraphs = int(np.floor((num_nodes - K) / S) + 1)
@@ -220,8 +183,6 @@ class GRANDataDev(object):
       subgraph_size = []
       subgraph_idx = []
       att_idx = []
-      positional1 = []
-      positional2 = []
       subgraph_count = 0
 
       for ii in range(len(adj_list)):
@@ -289,17 +250,6 @@ class GRANDataDev(object):
               adj_full[idx_row_gnn, idx_col_gnn].flatten().astype(np.uint8)
           ]
 
-                    # //Johan Add positional predict values, might add generalized solution later
-          # //Johan Positional1 contains values to base prediction on, positional2 contains ground truth
-
-          positional1 +=  [
-            np.concatenate([np.stack(( x_pos[:jj-K], y_pos[:jj-K])),
-                                np.ones(K) * np.inf])
-          ]
-
-          positional2 += [ np.stack(( x_pos[:jj] , y_pos[:jj] )) ]
-
-
           subgraph_size += [jj + K]
           subgraph_idx += [
               np.ones_like(label[-1]).astype(np.int64) * subgraph_count
@@ -320,8 +270,6 @@ class GRANDataDev(object):
       data['node_idx_feat'] = np.concatenate(node_idx_feat)
       data['label'] = np.concatenate(label)
       data['att_idx'] = np.concatenate(att_idx)
-      data['positional1'] = np.concatenate(positional1)
-      data['positional2'] = np.concatenate(positional2)
       data['subgraph_idx'] = np.concatenate(subgraph_idx)
       data['subgraph_count'] = subgraph_count
       data['num_nodes'] = num_nodes
@@ -386,12 +334,6 @@ class GRANDataDev(object):
 
       data['att_idx'] = torch.from_numpy(
           np.concatenate([bb['att_idx'] for bb in batch_pass], axis=0)).long()
-
-      data['positional1'] = torch.from_numpy(
-        np.concatenate([bb['positional1']] for bb in batch_pass], axis=0)).long()
-
-      data['positional2'] = torch.from_numpy(
-        np.concatenate([bb['positional2']] for bb in batch_pass], axis=0)).long()      
 
       # shift one position for padding 0-th row feature in the model
       node_idx_feat = np.concatenate(
