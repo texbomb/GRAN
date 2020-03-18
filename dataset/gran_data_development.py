@@ -10,8 +10,7 @@ from collections import defaultdict
 import torch.nn.functional as F
 from utils.data_helper import *
 
-
-class GRANData(object):
+class GRANDataDev(object):
 
   def __init__(self, config, graphs, tag='train'):
     self.config = config
