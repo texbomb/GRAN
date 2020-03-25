@@ -84,6 +84,8 @@ class GNN(nn.Module):
     # //Johan Think about adding postional data as optional config
     node_pos_diff = node_pos[edge[:, 0], :] - node_pos[edge[:, 1], :]
 
+    edge_input = torch.cat([edge_input, node_pos_diff], dim=1)
+
     msg = self.msg_func[layer_idx](edge_input)    
 
     ### attention on messages
@@ -436,7 +438,8 @@ class GRANMixtureBernoulli(nn.Module):
     label = input_dict['label'] if 'label' in input_dict else None
     num_nodes_pmf = input_dict[
         'num_nodes_pmf'] if 'num_nodes_pmf' in input_dict else None
-    node_pos = input_dict["positional1"]
+    node_pos = input_dict["positional1"] if 'positional1' in input_dict else None
+    pos_true = input_dict["positional2"] if 'positional2' in input_dict else None
     
     N_max = self.max_num_nodes
 
@@ -444,7 +447,7 @@ class GRANMixtureBernoulli(nn.Module):
       B, _, N, _ = A_pad.shape
 
       ### compute adj loss
-      log_theta, log_alpha, pos = self._inference(
+      log_theta, log_alpha, pos_pred = self._inference(
           A_pad=A_pad,
           edges=edges,
           node_idx_gnn=node_idx_gnn,
@@ -453,6 +456,8 @@ class GRANMixtureBernoulli(nn.Module):
           node_pos=node_pos)
 
       num_edges = log_theta.shape[0]
+
+      #pos_loss = positional_loss(pos_true, pos_pred, pos_loss_function, subgraph_idx) #//Johan 
 
       adj_loss = mixture_bernoulli_loss(label, log_theta, log_alpha,
                                         self.adj_loss_func, subgraph_idx)

@@ -293,11 +293,11 @@ class GRANDataDev(object):
           # //Johan Positional1 contains values to base prediction on, positional2 contains ground truth
 
           positional1 +=  [
-            np.concatenate([np.stack(( x_pos[:jj-K], y_pos[:jj-K])),
+            np.concatenate([np.stack(( x_pos[:jj], y_pos[:jj])),
                                 np.ones(K) * np.inf])
           ]
 
-          positional2 += [ np.stack(( x_pos[:jj] , y_pos[:jj] )) ]
+          positional2 += [ np.stack(( x_pos[:jj+K] , y_pos[:jj+K] )) ]
 
 
           subgraph_size += [jj + K]
