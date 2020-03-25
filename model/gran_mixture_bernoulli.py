@@ -43,7 +43,7 @@ class GNN(nn.Module):
     self.msg_func = nn.ModuleList([
         nn.Sequential(
             *[
-                nn.Linear(self.node_state_dim + self.edge_feat_dim,
+                nn.Linear(self.node_state_dim + self.edge_feat_dim + 2, 
                           self.msg_dim),                
                 nn.ReLU(),
                 nn.Linear(self.msg_dim, self.msg_dim)
@@ -54,7 +54,7 @@ class GNN(nn.Module):
       self.att_head = nn.ModuleList([
           nn.Sequential(
               *[
-                  nn.Linear(self.node_state_dim + self.edge_feat_dim,
+                  nn.Linear(self.node_state_dim + self.edge_feat_dim + 2,
                             self.att_hidden_dim),
                   nn.ReLU(),
                   nn.Linear(self.att_hidden_dim, self.msg_dim),
@@ -82,9 +82,9 @@ class GNN(nn.Module):
       edge_input = state_diff
     
     # //Johan Think about adding postional data as optional config
-    node_pos_diff = node_pos[edge[:, 0], :] - node_pos[edge[:, 1], :]
+    node_pos_diff = (node_pos[:, edge[:, 0]] - node_pos[:, edge[:, 1]]).float()
 
-    edge_input = torch.cat([edge_input, node_pos_diff], dim=1)
+    edge_input = torch.cat([edge_input, torch.t(node_pos_diff)], dim=1)
 
     msg = self.msg_func[layer_idx](edge_input)    
 
@@ -276,7 +276,6 @@ class GRANMixtureBernoulli(nn.Module):
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
     pos = self.output_pos(diff)
-    print(pos)
 
     return log_theta, log_alpha, pos
 
@@ -438,8 +437,8 @@ class GRANMixtureBernoulli(nn.Module):
     label = input_dict['label'] if 'label' in input_dict else None
     num_nodes_pmf = input_dict[
         'num_nodes_pmf'] if 'num_nodes_pmf' in input_dict else None
-    node_pos = input_dict["positional1"] if 'positional1' in input_dict else None
-    pos_true = input_dict["positional2"] if 'positional2' in input_dict else None
+    node_pos = input_dict["node_pos"] if 'node_pos' in input_dict else None
+    pos_true = input_dict["pos_true"] if 'pos_true' in input_dict else None
     
     N_max = self.max_num_nodes
 
@@ -457,13 +456,18 @@ class GRANMixtureBernoulli(nn.Module):
 
       num_edges = log_theta.shape[0]
 
-      #pos_loss = positional_loss(pos_true, pos_pred, pos_loss_function, subgraph_idx) #//Johan 
-
       adj_loss = mixture_bernoulli_loss(label, log_theta, log_alpha,
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      return adj_loss
+      pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func)
+      print(pos_loss)
+      print(adj_loss)
+
+      total_loss = total_loss_function(pos_loss, adj_loss) 
+
+      return total_loss
+      
     else:
       A = self._sampling(batch_size)
 
@@ -477,9 +481,13 @@ class GRANMixtureBernoulli(nn.Module):
       ]
       return A_list
 
-#def total_loss()
+def total_loss_function(pos_loss, adj_loss):
 
-#def positional_loss(pos_true, pos_pred, pos_loss_function, subgraph_idx):
+  total_loss = pos_loss + adj_loss
+
+  return total_loss
+
+def positional_loss(pos_true, pos_pred, pos_loss_func):
   """
     Args:
       pos_true: N X 2, Ground truth positional values
@@ -490,6 +498,13 @@ class GRANMixtureBernoulli(nn.Module):
     Returns:
       loss: mean squared error 
   """
+  pos_true = torch.t(pos_true).float()
+  
+  pos_loss = torch.sqrt(pos_loss_func(pos_true, pos_pred))
+
+  return pos_loss
+
+  
 def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
                            subgraph_idx):
   """
