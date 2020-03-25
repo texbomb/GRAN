@@ -73,6 +73,4 @@ def create_graphs(num_graphs):
         with open(f'train{n}.pickle', 'wb') as handle:
             pickle.dump(G, handle)
         
-t = create_graph()
-
-plot_graphs(t)
+create_graphs(10)
