@@ -238,3 +238,4 @@ def get_transport_graphs(data_dir='../data/triangles'):
     
     return graphs
     
+get_transport_graphs()

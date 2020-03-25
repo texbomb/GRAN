@@ -9,7 +9,7 @@ gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
-  name: test
+  name: transport
   data_path: data/
   node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8

@@ -1,0 +1,15 @@
+INFO  | 03/25/2020 12:50:54 PM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Mar-25-12-50-54_2752\log_exp_2752.txt
+INFO  | 03/25/2020 12:50:54 PM | File run_exp.py           | Line 27    | Exp instance id = 2752
+INFO  | 03/25/2020 12:50:54 PM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 03/25/2020 12:50:54 PM | File run_exp.py           | Line 29    | Config =
+ERROR | 03/25/2020 12:50:54 PM | File run_exp.py           | Line 42    | Traceback (most recent call last):
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\run_exp.py", line 36, in main
+    runner = eval(config.runner)(config)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\runner\gran_runner.py", line 111, in __init__
+    self.graphs = create_graphs(config.dataset.name, data_dir=config.dataset.data_path)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\utils\data_helper.py", line 176, in create_graphs
+    graphs = get_transport_graphs(data_dir)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\utils\data_helper.py", line 235, in get_transport_graphs
+    with open(file, 'rb') as handle:
+PermissionError: [Errno 13] Permission denied: 'data//DD'
+

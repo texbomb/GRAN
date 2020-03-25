@@ -488,6 +488,7 @@ def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
   reduce_log_alpha = reduce_log_alpha.scatter_add(
       0, subgraph_idx.unsqueeze(1).expand(-1, K), log_alpha)
   reduce_log_alpha = reduce_log_alpha / const.view(-1, 1)
+  reduce_log_alpha = F.log_softmax(reduce_log_alpha, -1)
 
   log_prob = -reduce_adj_loss + reduce_log_alpha
   log_prob = torch.logsumexp(log_prob, dim=1)
