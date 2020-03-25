@@ -73,13 +73,16 @@ class GNN(nn.Module):
       self.graph_output_head = nn.Sequential(
           *[nn.Linear(self.node_state_dim, self.graph_output_dim)])
 
-  def _prop(self, state, edge, edge_feat, layer_idx=0):
+  def _prop(self, state, edge, edge_feat, node_pos, layer_idx=0):
     ### compute message
     state_diff = state[edge[:, 0], :] - state[edge[:, 1], :]
     if self.edge_feat_dim > 0:
       edge_input = torch.cat([state_diff, edge_feat], dim=1)
     else:
       edge_input = state_diff
+    
+    # //Johan Think about adding postional data as optional config
+    node_pos_diff = node_pos[edge[:, 0], :] - node_pos[edge[:, 1], :]
 
     msg = self.msg_func[layer_idx](edge_input)    
 
@@ -97,7 +100,7 @@ class GNN(nn.Module):
     state = self.update_func[layer_idx](state_msg, state)
     return state
 
-  def forward(self, node_feat, edge, edge_feat, graph_idx=None):
+  def forward(self, node_feat, edge, edge_feat, node_pos, graph_idx=None):
     """
       N.B.: merge a batch of graphs as a single graph
 
@@ -114,7 +117,7 @@ class GNN(nn.Module):
         state = F.relu(state)
 
       for jj in range(self.num_prop):
-        state = self._prop(state, edge, edge_feat=edge_feat, layer_idx=ii)
+        state = self._prop(state, edge, edge_feat=edge_feat, node_pos=node_pos, layer_idx=ii)
 
     if self.has_residual:
       state = state + prev_state
@@ -173,6 +176,13 @@ class GRANMixtureBernoulli(nn.Module):
         nn.Linear(self.hidden_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.output_dim * self.num_mix_component))
+    
+    self.output_pos = nn.Sequential(
+        nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.ReLU(inplace=True),
+        nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.ReLU(inplace=True),
+        nn.Linear(self.hidden_dim, 2))
 
     self.output_alpha = nn.Sequential(
         nn.Linear(self.hidden_dim, self.hidden_dim),
@@ -201,13 +211,16 @@ class GRANMixtureBernoulli(nn.Module):
     pos_weight = torch.ones([1]) * self.edge_weight
     self.adj_loss_func = nn.BCEWithLogitsLoss(
         pos_weight=pos_weight, reduction='none')
+        
+    self.pos_loss_func = nn.MSELoss()
 
   def _inference(self,
                  A_pad=None,
                  edges=None,
                  node_idx_gnn=None,
                  node_idx_feat=None,
-                 att_idx=None):
+                 att_idx=None,
+                 node_pos=None):
     """ generate adj in row-wise auto-regressive fashion """
 
     B, C, N_max, _ = A_pad.shape
@@ -250,7 +263,7 @@ class GRANMixtureBernoulli(nn.Module):
     # GNN inference
     # N.B.: node_feat is shared by multiple subgraphs within the same batch
     node_state = self.decoder(
-        node_feat[node_idx_feat], edges, edge_feat=att_edge_feat)
+        node_feat[node_idx_feat], edges, edge_feat=att_edge_feat, node_pos=node_pos)
 
     ### Pairwise predict edges
     diff = node_state[node_idx_gnn[:, 0], :] - node_state[node_idx_gnn[:, 1], :]
@@ -260,7 +273,10 @@ class GRANMixtureBernoulli(nn.Module):
     log_theta = log_theta.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
-    return log_theta, log_alpha
+    pos = self.output_pos(diff)
+    print(pos)
+
+    return log_theta, log_alpha, pos
 
   def _sampling(self, B):
     """ generate adj in row-wise auto-regressive fashion """
@@ -420,19 +436,21 @@ class GRANMixtureBernoulli(nn.Module):
     label = input_dict['label'] if 'label' in input_dict else None
     num_nodes_pmf = input_dict[
         'num_nodes_pmf'] if 'num_nodes_pmf' in input_dict else None
-
+    node_pos = input_dict["positional1"]
+    
     N_max = self.max_num_nodes
 
     if not is_sampling:
       B, _, N, _ = A_pad.shape
 
       ### compute adj loss
-      log_theta, log_alpha = self._inference(
+      log_theta, log_alpha, pos = self._inference(
           A_pad=A_pad,
           edges=edges,
           node_idx_gnn=node_idx_gnn,
           node_idx_feat=node_idx_feat,
-          att_idx=att_idx)
+          att_idx=att_idx,
+          node_pos=node_pos)
 
       num_edges = log_theta.shape[0]
 
@@ -454,7 +472,19 @@ class GRANMixtureBernoulli(nn.Module):
       ]
       return A_list
 
+#def total_loss()
 
+#def positional_loss(pos_true, pos_pred, pos_loss_function, subgraph_idx):
+  """
+    Args:
+      pos_true: N X 2, Ground truth positional values
+      pos_pred: N X 2, Predicted positional values 
+      pos_loss_func: MSE loss
+      subgraph_idx: E X 1, see comments above
+
+    Returns:
+      loss: mean squared error 
+  """
 def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
                            subgraph_idx):
   """
