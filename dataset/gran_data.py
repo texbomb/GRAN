@@ -183,7 +183,7 @@ class GRANData(object):
     x_pos = graph["x_pos"]
     y_pos = graph["y_pos"]
 
-#    adj_list = pickle.load(open(self.file_names[index], 'rb'))
+    adj_list = pickle.load(open(self.file_names[index], 'rb'))
     num_nodes = adj_list[0].shape[0]
     num_subgraphs = int(np.floor((num_nodes - K) / S) + 1)
 
@@ -294,7 +294,7 @@ class GRANData(object):
 
           positional1 +=  [
             np.concatenate([np.stack(( x_pos[:jj-K], y_pos[:jj-K])),
-                                np.ones((2, K)) * np.inf], axis=1)
+                                np.ones(K) * np.inf])
           ]
 
           positional2 += [ np.stack(( x_pos[:jj] , y_pos[:jj] )) ]
@@ -320,8 +320,8 @@ class GRANData(object):
       data['node_idx_feat'] = np.concatenate(node_idx_feat)
       data['label'] = np.concatenate(label)
       data['att_idx'] = np.concatenate(att_idx)
-      data['positional1'] = np.concatenate(positional1, axis=1)
-      data['positional2'] = np.concatenate(positional2, axis=1)
+      data['positional1'] = np.concatenate(positional1)
+      data['positional2'] = np.concatenate(positional2)
       data['subgraph_idx'] = np.concatenate(subgraph_idx)
       data['subgraph_count'] = subgraph_count
       data['num_nodes'] = num_nodes
