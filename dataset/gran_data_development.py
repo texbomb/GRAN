@@ -183,7 +183,7 @@ class GRANDataDev(object):
     x_pos = graph["x_pos"]
     y_pos = graph["y_pos"]
 
-    adj_list = pickle.load(open(self.file_names[index], 'rb'))
+    #adj_list = pickle.load(open(self.file_names[index], 'rb'))
     num_nodes = adj_list[0].shape[0]
     num_subgraphs = int(np.floor((num_nodes - K) / S) + 1)
 
