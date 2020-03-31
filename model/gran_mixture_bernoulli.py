@@ -264,6 +264,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     # GNN inference
     # N.B.: node_feat is shared by multiple subgraphs within the same batch
+    # Modified to take the node position into account
     node_state = self.decoder(
         node_feat[node_idx_feat], edges, edge_feat=att_edge_feat, node_pos=node_pos)
 
@@ -275,6 +276,7 @@ class GRANMixtureBernoulli(nn.Module):
     log_theta = log_theta.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
+    # Predics positions from the diff state
     pos = self.output_pos(diff)
 
     return log_theta, log_alpha, pos
@@ -461,8 +463,6 @@ class GRANMixtureBernoulli(nn.Module):
       adj_loss = adj_loss * float(self.num_canonical_order)
 
       pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func)
-      print(pos_loss)
-      print(adj_loss)
 
       total_loss = total_loss_function(pos_loss, adj_loss) 
 
@@ -481,11 +481,15 @@ class GRANMixtureBernoulli(nn.Module):
       ]
       return A_list
 
+# Total loss -> combined adj and positional loss. Need to be tuned with an alpha 
+
 def total_loss_function(pos_loss, adj_loss):
 
   total_loss = pos_loss + adj_loss
 
   return total_loss
+
+# Positional loss function - RMSE loss between predicted and true positions
 
 def positional_loss(pos_true, pos_pred, pos_loss_func):
   """
