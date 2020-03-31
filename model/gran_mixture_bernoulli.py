@@ -299,6 +299,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
+    node_pos = torch.ones((2,B)).to(self.device)
 
     for ii in range(0, N_pad, S):
       # for ii in range(0, 3530, S):
@@ -335,6 +336,10 @@ class GRANMixtureBernoulli(nn.Module):
       ]
       edges = torch.cat(edges, dim=1).t()
 
+      if ii != 0:
+        ones = torch.ones(2,B).to(self.device)
+        node_pos = torch.cat((node_pos, ones), dim = 1)
+
       att_idx = torch.cat([torch.zeros(ii).long(),
                            torch.arange(1, K + 1)]).to(self.device)
       att_idx = att_idx.view(1, -1).expand(B, -1).contiguous().view(-1, 1)
@@ -357,7 +362,7 @@ class GRANMixtureBernoulli(nn.Module):
             1, att_idx[[edges[:, 1]]] + self.att_edge_dim, 1)
 
       node_state_out = self.decoder(
-          node_state_in.view(-1, H), edges, edge_feat=att_edge_feat)
+          node_state_in.view(-1, H), edges, edge_feat=att_edge_feat, node_pos=node_pos)
       node_state_out = node_state_out.view(B, jj, -1)
 
       idx_row, idx_col = np.meshgrid(np.arange(ii, jj), np.arange(jj))
@@ -376,6 +381,12 @@ class GRANMixtureBernoulli(nn.Module):
       prob_alpha = log_alpha.mean(dim=1).exp()      
       alpha = torch.multinomial(prob_alpha, 1).squeeze(dim=1).long()
 
+      pos = self.output_pos(diff)
+
+      node_pos[:,ii:jj] =  torch.t(pos)[:,ii:jj]
+      print(node_pos)
+
+
       prob = []
       for bb in range(B):
         prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
@@ -388,7 +399,8 @@ class GRANMixtureBernoulli(nn.Module):
       A = torch.tril(A, diagonal=-1)
       A = A + A.transpose(1, 2)
 
-    return A
+
+    return A, node_pos
 
   def forward(self, input_dict):
     """

@@ -43,8 +43,8 @@ train:
   max_epoch: 3000
   batch_size: 1
   display_iter: 10
-  snapshot_epoch: 100
-  valid_epoch: 50
+  snapshot_epoch: 10
+  valid_epoch: 10
   lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9
@@ -63,5 +63,5 @@ test:
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: snapshot_model
-  test_model_name: gran_grid.pth
+  test_model_dir: C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Mar-31-15-07-48_22628
+  test_model_name: model_snapshot_0000020.pth
