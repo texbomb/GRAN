@@ -1,0 +1,25 @@
+INFO  | 04/01/2020 02:30:27 PM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-01-14-30-27_16444\log_exp_16444.txt
+INFO  | 04/01/2020 02:30:27 PM | File run_exp.py           | Line 27    | Exp instance id = 16444
+INFO  | 04/01/2020 02:30:27 PM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 04/01/2020 02:30:27 PM | File run_exp.py           | Line 29    | Config =
+INFO  | 04/01/2020 02:30:28 PM | File gran_runner.py       | Line 124   | Train/val/test = 8/2/2
+INFO  | 04/01/2020 02:30:28 PM | File gran_runner.py       | Line 137   | No Edges vs. Edges in training set = 2.0
+ERROR | 04/01/2020 02:30:33 PM | File run_exp.py           | Line 42    | Traceback (most recent call last):
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\run_exp.py", line 40, in main
+    runner.test()
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\runner\gran_runner.py", line 310, in test
+    A_tmp = model(input_dict)
+  File "C:\Users\olive\Anaconda3\envs\Bachelor\lib\site-packages\torch\nn\modules\module.py", line 547, in __call__
+    result = self.forward(*input, **kwargs)
+  File "C:\Users\olive\Anaconda3\envs\Bachelor\lib\site-packages\torch\nn\parallel\data_parallel.py", line 150, in forward
+    return self.module(*inputs[0], **kwargs[0])
+  File "C:\Users\olive\Anaconda3\envs\Bachelor\lib\site-packages\torch\nn\modules\module.py", line 547, in __call__
+    result = self.forward(*input, **kwargs)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\model\gran_mixture_bernoulli.py", line 481, in forward
+    A = self._sampling(batch_size)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\model\gran_mixture_bernoulli.py", line 366, in _sampling
+    node_state_in.view(-1, H), edges, edge_feat=att_edge_feat, node_feat = tmp_node_pos)
+  File "C:\Users\olive\Anaconda3\envs\Bachelor\lib\site-packages\torch\nn\modules\module.py", line 547, in __call__
+    result = self.forward(*input, **kwargs)
+TypeError: forward() got multiple values for argument 'node_feat'
+

@@ -88,7 +88,7 @@ class GNN(nn.Module):
 
     msg = self.msg_func[layer_idx](edge_input)    
 
-    ### attention on messages
+    ## attention on messages
     if self.has_attention:
       att_weight = self.att_head[layer_idx](edge_input)
       msg = msg * att_weight
@@ -281,6 +281,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     return log_theta, log_alpha, pos
 
+
   def _sampling(self, B):
     """ generate adj in row-wise auto-regressive fashion """
 
@@ -299,7 +300,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
-    node_pos = torch.ones((2,B)).to(self.device)
+    node_pos = torch.zeros((B,2,N_pad)).to(self.device)
 
     for ii in range(0, N_pad, S):
       # for ii in range(0, 3530, S):
@@ -336,9 +337,16 @@ class GRANMixtureBernoulli(nn.Module):
       ]
       edges = torch.cat(edges, dim=1).t()
 
-      if ii != 0:
-        ones = torch.ones(2,B).to(self.device)
-        node_pos = torch.cat((node_pos, ones), dim = 1)
+      if ii == 0:
+        tmp_node_pos = [node_pos[bb,:, :ii] for bb in range(B)]
+      else:
+        tmp_node_pos = [node_pos[bb,:, :jj] for bb in range(B)]
+
+        # tmp_node_pos = [torch.cat((node_pos[bb,:, :ii], node_pos[bb,:,ii].reshape(1, -1)), dim=0) for bb in range(B)]
+      #tmp_node_pos = [node_pos[bb,:, :ii] for bb in range(B)]
+
+      tmp_node_pos = torch.cat(tmp_node_pos, dim=1)  
+
 
       att_idx = torch.cat([torch.zeros(ii).long(),
                            torch.arange(1, K + 1)]).to(self.device)
@@ -362,7 +370,7 @@ class GRANMixtureBernoulli(nn.Module):
             1, att_idx[[edges[:, 1]]] + self.att_edge_dim, 1)
 
       node_state_out = self.decoder(
-          node_state_in.view(-1, H), edges, edge_feat=att_edge_feat, node_pos=node_pos)
+          node_state_in.view(-1, H), edges, edge_feat=att_edge_feat, node_pos = tmp_node_pos)
       node_state_out = node_state_out.view(B, jj, -1)
 
       idx_row, idx_col = np.meshgrid(np.arange(ii, jj), np.arange(jj))
@@ -374,18 +382,15 @@ class GRANMixtureBernoulli(nn.Module):
       log_theta = self.output_theta(diff)
       log_alpha = self.output_alpha(diff)
 
+      pos = self.output_pos(diff)
+      node_pos[:,:,ii:jj] = pos.reshape(20,2,-1)[:,:,ii:jj]
+
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
 
       log_alpha = log_alpha.view(B, -1, self.num_mix_component)  # B X K X (ii+K)
       prob_alpha = log_alpha.mean(dim=1).exp()      
       alpha = torch.multinomial(prob_alpha, 1).squeeze(dim=1).long()
-
-      pos = self.output_pos(diff)
-
-      node_pos[:,ii:jj] =  torch.t(pos)[:,ii:jj]
-      print(node_pos)
-
 
       prob = []
       for bb in range(B):
@@ -398,7 +403,6 @@ class GRANMixtureBernoulli(nn.Module):
     if self.is_sym:
       A = torch.tril(A, diagonal=-1)
       A = A + A.transpose(1, 2)
-
 
     return A, node_pos
 
