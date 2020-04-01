@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "module": "run_exp",
-            "args": ["-c", "config/gran_grid.YAML"]
+            "args": ["-c", "config/gran_grid.YAML","-t"]
         }
     ]
 }
