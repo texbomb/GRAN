@@ -28,6 +28,11 @@ def create_graph():
     
     return G
 
+G = create_graph()
+
+G.nodes(data=True)
+
+plot_graphs(G)
 
 # Gets positions of a graph
 def get_pos(G):
@@ -65,6 +70,7 @@ def plot_graphs(G):
     plt.ylim(y_min-1, y_max+1)
     plt.show()
 
+plot_graphs(create_graph())
 
 # Create x number of graphs and saves them
 def create_graphs(num_graphs):
@@ -72,5 +78,39 @@ def create_graphs(num_graphs):
         G = create_graph()
         with open(f'train{n}.pickle', 'wb') as handle:
             pickle.dump(G, handle)
+            
+            
+G = nx.to_numpy_matrix(G)
+G = nx.from_numpy_matrix(G)
         
-create_graphs(10)
+def get_graph(adj, node_pos):
+  """ get a graph from zero-padded adj """
+  # remove all zeros rows and columns
+  #adj = adj[~np.all(adj == 0, axis=1)]
+  #adj = adj[:, ~np.all(adj == 0, axis=0)]
+  adj = np.asmatrix(adj)
+  G = nx.from_numpy_matrix(adj)
+  return G
+
+G = get_graph(G)
+
+pos = {
+       0: {"x": 0, "y": 0},
+       1: {"x": 1, "y": 10},
+       2: {"x": 2, "y": 0},
+       }
+
+nx.set_node_attributes(G, pos)
+
+G.nodes(data=True)
+
+def pos_list_to_dict(pos):
+    pos = np.transpose(pos)
+    dict_pos = {}
+    for i, p in enumerate(pos):
+        dict_pos[i] = {"x": p[0], "y": p[1]}
+    return dict_pos
+
+pos_test = np.array([[0, 1, 2], [0, 10, 0]])
+
+pos_list_to_dict(pos_test)

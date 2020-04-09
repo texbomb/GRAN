@@ -56,14 +56,29 @@ def compute_edge_ratio(G_list):
   return ratio
 
 
-def get_graph(adj):
+def get_graph(adj, node_pos):
   """ get a graph from zero-padded adj """
   # remove all zeros rows and columns
   adj = adj[~np.all(adj == 0, axis=1)]
   adj = adj[:, ~np.all(adj == 0, axis=0)]
   adj = np.asmatrix(adj)
   G = nx.from_numpy_matrix(adj)
+  
+  # //Oliver converts the node list to a dict
+  dict_pos = pos_list_to_dict(node_pos)
+  # // Oliver Combines the graph with it's positions 
+  nx.set_node_attributes(G, dict_pos)
+  
   return G
+
+def pos_list_to_dict(pos):
+    """converts pos list to dict """
+    pos = np.transpose(pos)
+    dict_pos = {}
+    for i, p in enumerate(pos):
+        dict_pos[i] = {"x": p[0], "y": p[1]}
+    return dict_pos
+
 
 
 def evaluate(graph_gt, graph_pred, degree_only=True):
@@ -296,6 +311,7 @@ class GranRunner(object):
 
       ### Generate Graphs
       A_pred = []
+      node_pred = []
       num_nodes_pred = []
       num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
 
@@ -311,11 +327,12 @@ class GranRunner(object):
           gen_run_time += [time.time() - start_time]
           A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
           num_nodes_pred += [aa.shape[0] for aa in A_tmp]
+          node_pred += [aa.data.cpu().numpy() for aa in node_pos]
 
       logger.info('Average test time per mini-batch = {}'.format(
           np.mean(gen_run_time)))
           
-      graphs_gen = [get_graph(aa) for aa in A_pred]
+      graphs_gen = [get_graph(aa, node_pred[i]) for i, aa in enumerate(A_pred)]
 
     ### Visualize Generated Graphs
     if self.is_vis:
@@ -339,12 +356,12 @@ class GranRunner(object):
         CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
         vis_graphs += [CGs[0]]
         #//Johan Husk at slette, lige nu gemmer den kun en graf
-        break
-
+        break 
+      
       if self.is_single_plot:
         draw_graph_list(vis_graphs, num_row, num_col, fname=save_name, layout='spring')
       else:
-        draw_graph_list_separate(vis_graphs, fname=save_name[:-4], is_single=True, layout='spring')
+        draw_graph_list_separate(vis_graphs, fname=save_name[:-4], is_single=True, layout='position')
 
       save_name = os.path.join(self.config.save_dir, 'train_graphs.png')
 
@@ -360,7 +377,7 @@ class GranRunner(object):
             self.graphs_train[:self.num_vis],
             fname=save_name[:-4],
             is_single=True,
-            layout='spring')
+            layout='position')
 
     ### Evaluation
     if self.config.dataset.name in ['lobster']:

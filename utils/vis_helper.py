@@ -80,6 +80,9 @@ def draw_graph_list_separate(G_list,
           G, k=k / np.sqrt(G.number_of_nodes()), iterations=100)
     elif layout == 'spectral':
       pos = nx.spectral_layout(G)
+    elif layout == 'position':
+      pos = get_pos(G)
+
 
     if is_single:
       # node_size default 60, edge_width default 1.5
@@ -103,7 +106,33 @@ def draw_graph_list_separate(G_list,
           font_size=1.5)
       nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.2)
 
+    x_pos = []
+    y_pos = []
+    
+    for k in pos.keys():
+        x_pos.append(pos[k][0])        
+        y_pos.append(pos[k][1])   
+    
+    x_min = min(x_pos)
+    x_max = max(x_pos)
+
+    y_min = min(y_pos)
+    y_max = max(y_pos)
+
     plt.draw()
+    plt.xlim(x_min-1, x_max+1)
+    plt.ylim(y_min-1, y_max+1)
     plt.tight_layout()
     plt.savefig(fname+'_{:03d}.png'.format(i), dpi=300)
     plt.close()
+
+def get_pos(G):
+    
+    nodes = G.nodes
+    
+    pos = {}
+    
+    for n in nodes:
+        pos[n] = [G.nodes(data=True)[n]["x"], G.nodes(data=True)[n]["y"]]
+        
+    return pos
