@@ -485,7 +485,7 @@ class GRANMixtureBernoulli(nn.Module):
       return total_loss
       
     else:
-      A = self._sampling(batch_size)
+      A, node_pos = self._sampling(batch_size)
 
       ### sample number of nodes
       num_nodes_pmf = torch.from_numpy(num_nodes_pmf).to(self.device)
@@ -495,7 +495,7 @@ class GRANMixtureBernoulli(nn.Module):
       A_list = [
           A[ii, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
       ]
-      return A_list
+      return A_list, node_pos
 
 # Total loss -> combined adj and positional loss. Need to be tuned with an alpha 
 

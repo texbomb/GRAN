@@ -307,7 +307,7 @@ class GranRunner(object):
           input_dict['is_sampling']=True
           input_dict['batch_size']=self.test_conf.batch_size
           input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
-          A_tmp = model(input_dict)
+          A_tmp, node_pos = model(input_dict)
           gen_run_time += [time.time() - start_time]
           A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
           num_nodes_pred += [aa.shape[0] for aa in A_tmp]
@@ -338,6 +338,8 @@ class GranRunner(object):
         CGs = [gg.subgraph(c) for c in nx.connected_components(gg)]
         CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
         vis_graphs += [CGs[0]]
+        #//Johan Husk at slette, lige nu gemmer den kun en graf
+        break
 
       if self.is_single_plot:
         draw_graph_list(vis_graphs, num_row, num_col, fname=save_name, layout='spring')

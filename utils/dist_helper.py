@@ -135,8 +135,8 @@ def disc(samples1, samples2, kernel, is_parallel=True, *args, **kwargs):
           (s1, samples2, partial(kernel, *args, **kwargs)) for s1 in samples1
       ]):
         d += dist
-
-  d /= len(samples1) * len(samples2)
+# // Oliver har tilføjet + 1 - husk at fjern
+  d /= len(samples1) * len(samples2) + 1
   return d
 
 

@@ -1,0 +1,14 @@
+INFO  | 04/09/2020 10:04:54 AM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-09-10-04-54_19928\log_exp_19928.txt
+INFO  | 04/09/2020 10:04:54 AM | File run_exp.py           | Line 27    | Exp instance id = 19928
+INFO  | 04/09/2020 10:04:54 AM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 04/09/2020 10:04:54 AM | File run_exp.py           | Line 29    | Config =
+INFO  | 04/09/2020 10:04:54 AM | File gran_runner.py       | Line 124   | Train/val/test = 8/2/2
+INFO  | 04/09/2020 10:04:54 AM | File gran_runner.py       | Line 137   | No Edges vs. Edges in training set = 2.0
+INFO  | 04/09/2020 10:04:58 AM | File gran_runner.py       | Line 316   | Average test time per mini-batch = 0.42445874214172363
+ERROR | 04/09/2020 10:06:01 AM | File run_exp.py           | Line 42    | Traceback (most recent call last):
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\run_exp.py", line 40, in main
+    runner.test()
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\runner\gran_runner.py", line 340, in test
+    vis_graphs += [CGs[0]]
+IndexError: list index out of range
+
