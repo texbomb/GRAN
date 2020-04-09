@@ -63,5 +63,5 @@ test:
   num_vis: 20
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Apr-09-12-00-37_11552
-  test_model_name: model_snapshot_0000200.pth
+  test_model_dir: C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Apr-09-17-05-36_16280
+  test_model_name: model_snapshot_0000100.pth

@@ -293,7 +293,7 @@ class GRANData(object):
 
           positional1 +=  [
             np.concatenate([np.stack(( x_pos[:jj], y_pos[:jj])),
-                                np.ones((2, K)) * np.inf], axis=1).astype(np.float64)
+                                np.zeros((2, K))], axis=1).astype(np.float64)
           ]
 
           positional2 += [ np.stack(( x_pos[:jj+K] , y_pos[:jj+K] )).astype(np.float64)]

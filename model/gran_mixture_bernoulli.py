@@ -505,8 +505,8 @@ def total_loss_function(pos_loss, adj_loss):
   # print(f"adj_loss: {adj_loss}")
 
 
-  total_loss = pos_loss * 0.15 + adj_loss
-
+#  total_loss = pos_loss * 0.15 + adj_loss
+  total_loss = pos_loss
   return total_loss
 
 # Positional loss function - RMSE loss between predicted and true positions

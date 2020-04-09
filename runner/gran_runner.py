@@ -357,11 +357,11 @@ class GranRunner(object):
         vis_graphs += [CGs[0]]
         #//Johan Husk at slette, lige nu gemmer den kun en graf
         break 
-      
+
       if self.is_single_plot:
         draw_graph_list(vis_graphs, num_row, num_col, fname=save_name, layout='spring')
       else:
-        draw_graph_list_separate(vis_graphs, fname=save_name[:-4], is_single=True, layout='position')
+        draw_graph_list_separate(vis_graphs, fname=save_name[:-4], is_single=True, layout='spring')
 
       save_name = os.path.join(self.config.save_dir, 'train_graphs.png')
 
@@ -377,7 +377,7 @@ class GranRunner(object):
             self.graphs_train[:self.num_vis],
             fname=save_name[:-4],
             is_single=True,
-            layout='position')
+            layout='spring')
 
     ### Evaluation
     if self.config.dataset.name in ['lobster']:

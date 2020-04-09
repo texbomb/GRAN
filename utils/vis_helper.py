@@ -106,6 +106,7 @@ def draw_graph_list_separate(G_list,
           font_size=1.5)
       nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.2)
 
+    # Added to set the axis properly 
     x_pos = []
     y_pos = []
     

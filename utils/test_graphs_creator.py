@@ -18,9 +18,9 @@ os.chdir("../data/triangles")
 def create_graph():
     G = nx.Graph()
     
-    G.add_node(1, x=0, y=0)
-    G.add_node(2, x=1, y=10)
-    G.add_node(3, x=2, y=0)
+    G.add_node(1, x=100, y=200)
+    G.add_node(2, x=250, y=30)
+    G.add_node(3, x=20, y=150)
     
     G.add_edge(1, 2)
     G.add_edge(1, 3)
@@ -29,10 +29,6 @@ def create_graph():
     return G
 
 G = create_graph()
-
-G.nodes(data=True)
-
-plot_graphs(G)
 
 # Gets positions of a graph
 def get_pos(G):
@@ -76,12 +72,15 @@ plot_graphs(create_graph())
 def create_graphs(num_graphs):
     for n in range(num_graphs):
         G = create_graph()
-        with open(f'train{n}.pickle', 'wb') as handle:
+        with open(f'train_big{n}.pickle', 'wb') as handle:
             pickle.dump(G, handle)
             
+create_graphs(10)
             
 G = nx.to_numpy_matrix(G)
-G = nx.from_numpy_matrix(G)
+
+pos_test = np.array([[0, 1, 2], [0, 10, 0]])
+
         
 def get_graph(adj, node_pos):
   """ get a graph from zero-padded adj """
@@ -90,27 +89,18 @@ def get_graph(adj, node_pos):
   #adj = adj[:, ~np.all(adj == 0, axis=0)]
   adj = np.asmatrix(adj)
   G = nx.from_numpy_matrix(adj)
+  
+  # //Oliver converts the node list to a dict
+  dict_pos = pos_list_to_dict(node_pos)
+  # // Oliver Combines the graph with it's positions 
+  nx.set_node_attributes(G, dict_pos)
+  
   return G
 
-G = get_graph(G)
-
-pos = {
-       0: {"x": 0, "y": 0},
-       1: {"x": 1, "y": 10},
-       2: {"x": 2, "y": 0},
-       }
-
-nx.set_node_attributes(G, pos)
-
-G.nodes(data=True)
-
 def pos_list_to_dict(pos):
+    """converts pos list to dict """
     pos = np.transpose(pos)
     dict_pos = {}
     for i, p in enumerate(pos):
         dict_pos[i] = {"x": p[0], "y": p[1]}
     return dict_pos
-
-pos_test = np.array([[0, 1, 2], [0, 10, 0]])
-
-pos_list_to_dict(pos_test)
