@@ -291,10 +291,10 @@ class GRANData(object):
                     # //Johan Add positional predict values, might add generalized solution later
           # //Johan Positional1 contains values to base prediction on, positional2 contains ground truth
 
-          positional1 +=  [
-            np.concatenate([np.stack(( x_pos[:jj], y_pos[:jj])),
-                                np.zeros((2, K))], axis=1).astype(np.float64)
-          ]
+          # positional1 +=  [
+          #   np.concatenate([np.stack(( x_pos[:jj], y_pos[:jj])),
+          #                       np.zeros((2, K))], axis=1).astype(np.float64)
+          # ]
 
           positional2 += [ np.stack(( x_pos[:jj+K] , y_pos[:jj+K] )).astype(np.float64)]
 
@@ -319,7 +319,7 @@ class GRANData(object):
       data['node_idx_feat'] = np.concatenate(node_idx_feat)
       data['label'] = np.concatenate(label)
       data['att_idx'] = np.concatenate(att_idx)
-      data['positional1'] = np.concatenate(positional1, axis=1)
+      data['positional1'] = np.stack(( x_pos, y_pos), axis = 0)
       data['positional2'] = np.concatenate(positional2, axis=1)
       data['subgraph_idx'] = np.concatenate(subgraph_idx)
       data['subgraph_count'] = subgraph_count
@@ -386,8 +386,13 @@ class GRANData(object):
       data['att_idx'] = torch.from_numpy(
           np.concatenate([bb['att_idx'] for bb in batch_pass], axis=0)).long()
 
-      data['positional1'] = torch.from_numpy(
-          np.concatenate([bb['positional1'] for bb in batch_pass], axis=0)).long()
+      pos_list = []
+
+      for bb in batch_pass:
+        for ii in range(bb["positional1"].shape[1]+1):
+          pos_list.append(np.concatenate((bb["positional1"][:, :ii], np.zeros((2, self.max_num_nodes-ii))), axis=1))
+      data["positional1"] = torch.from_numpy(np.concatenate(pos_list)).view(-1, 2, self.max_num_nodes)
+      
 
       data['positional2'] = torch.from_numpy(
         np.concatenate([bb['positional2'] for bb in batch_pass], axis=0)).long()      

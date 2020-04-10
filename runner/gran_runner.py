@@ -79,8 +79,6 @@ def pos_list_to_dict(pos):
         dict_pos[i] = {"x": p[0], "y": p[1]}
     return dict_pos
 
-
-
 def evaluate(graph_gt, graph_pred, degree_only=True):
   mmd_degree = degree_stats(graph_gt, graph_pred)
 

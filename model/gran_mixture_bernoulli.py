@@ -184,7 +184,9 @@ class GRANMixtureBernoulli(nn.Module):
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
-        nn.Linear(self.hidden_dim, 2))
+        nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.ReLU(inplace=True),
+        nn.Linear(self.hidden_dim, 1))
 
     self.output_alpha = nn.Sequential(
         nn.Linear(self.hidden_dim, self.hidden_dim),
@@ -214,7 +216,7 @@ class GRANMixtureBernoulli(nn.Module):
     self.adj_loss_func = nn.BCEWithLogitsLoss(
         pos_weight=pos_weight, reduction='none')
         
-    self.pos_loss_func = nn.MSELoss()
+    self.pos_loss_func = nn.SmoothL1Loss()
 
   def _inference(self,
                  A_pad=None,
@@ -522,7 +524,10 @@ def positional_loss(pos_true, pos_pred, pos_loss_func):
     Returns:
       loss: mean squared error 
   """
-  pos_true = torch.t(pos_true).float()
+  pos_true = torch.t(pos_true[0]).float()
+
+  print(f"true{pos_true}")
+  print(f"pred{pos_pred}")
   
   pos_loss = torch.sqrt(pos_loss_func(pos_true, pos_pred))
 
