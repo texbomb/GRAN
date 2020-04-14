@@ -82,7 +82,7 @@ class GNN(nn.Module):
       edge_input = state_diff
     
     # //Johan Think about adding postional data as optional config
-    node_pos_diff = (node_pos[:, edge[:, 0]] - node_pos[:, edge[:, 1]]).float()
+    node_pos_diff = (node_pos[: ,edge[:, 0]] - node_pos[:, edge[:, 1]]).float()
 
     edge_input = torch.cat([edge_input, torch.t(node_pos_diff)], dim=1)
 
@@ -198,6 +198,8 @@ class GRANMixtureBernoulli(nn.Module):
       self.embedding_dim = config.model.embedding_dim
       self.decoder_input = nn.Sequential(
           nn.Linear(self.max_num_nodes, self.embedding_dim))
+      self.decoder_pos_input = nn.Sequential(
+          nn.Linear(self.max_num_nodes, self.embedding_dim))
     else:
       self.embedding_dim = self.max_num_nodes
 
@@ -232,13 +234,18 @@ class GRANMixtureBernoulli(nn.Module):
 
     if self.dimension_reduce:
       node_feat = self.decoder_input(A_pad)  # BCN_max X H
+      # //Johan Think about adding optional positional values
+      node_pos = node_pos
     else:
       node_feat = A_pad  # BCN_max X N_max
+      nod_pos = node_pos
 
     ### GNN inference
     # pad zero as node feature for newly generated nodes (1st row)
     node_feat = F.pad(
         node_feat, (0, 0, 1, 0), 'constant', value=0.0)  # (BCN_max + 1) X N_max
+    node_pos = F.pad(
+        node_pos, (1, 0, 0, 0), 'constant', value=0.0)
 
     # create symmetry-breaking edge feature for the newly generated nodes
     att_idx = att_idx.view(-1, 1)
@@ -266,7 +273,7 @@ class GRANMixtureBernoulli(nn.Module):
     # N.B.: node_feat is shared by multiple subgraphs within the same batch
     # Modified to take the node position into account
     node_state = self.decoder(
-        node_feat[node_idx_feat], edges, edge_feat=att_edge_feat, node_pos=node_pos)
+        node_feat[node_idx_feat], edges, edge_feat=att_edge_feat, node_pos=node_pos[:,node_idx_feat])
 
     ### Pairwise predict edges
     diff = node_state[node_idx_gnn[:, 0], :] - node_state[node_idx_gnn[:, 1], :]
@@ -277,7 +284,9 @@ class GRANMixtureBernoulli(nn.Module):
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
     # Predics positions from the diff state
-    pos = self.output_pos(diff)
+    pos = self.output_pos(node_state)
+    #print(pos)
+    print(pos)
 
     return log_theta, log_alpha, pos
 
@@ -315,6 +324,7 @@ class GRANMixtureBernoulli(nn.Module):
       if ii >= K:
         if self.dimension_reduce:
           node_state[:, ii - K:ii, :] = self.decoder_input(A[:, ii - K:ii, :N])
+
         else:
           node_state[:, ii - K:ii, :] = A[:, ii - S:ii, :N]
       else:
@@ -404,6 +414,9 @@ class GRANMixtureBernoulli(nn.Module):
       A = torch.tril(A, diagonal=-1)
       A = A + A.transpose(1, 2)
 
+    #print(node_pos)
+    #print(A)
+
     return A, node_pos
 
   def forward(self, input_dict):
@@ -478,7 +491,7 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func)
+      pos_loss = positional_loss(pos_true[:,node_idx_feat], pos_pred, self.pos_loss_func)
 
       total_loss = total_loss_function(pos_loss, adj_loss) 
 
@@ -487,7 +500,7 @@ class GRANMixtureBernoulli(nn.Module):
     else:
       A, node_pos = self._sampling(batch_size)
 
-      ### sample number of nodes
+      ### sample numbatber of nodes
       num_nodes_pmf = torch.from_numpy(num_nodes_pmf).to(self.device)
       num_nodes = torch.multinomial(
           num_nodes_pmf, batch_size, replacement=True) + 1  # shape B X 1
@@ -495,6 +508,7 @@ class GRANMixtureBernoulli(nn.Module):
       A_list = [
           A[ii, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
       ]
+      print(A_list)
       return A_list, node_pos
 
 # Total loss -> combined adj and positional loss. Need to be tuned with an alpha 
@@ -505,8 +519,8 @@ def total_loss_function(pos_loss, adj_loss):
   # print(f"adj_loss: {adj_loss}")
 
 
-#  total_loss = pos_loss * 0.15 + adj_loss
-  total_loss = pos_loss
+  total_loss =   adj_loss  #pos_loss * 0.1
+
   return total_loss
 
 # Positional loss function - RMSE loss between predicted and true positions
@@ -567,5 +581,7 @@ def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
   log_prob = -reduce_adj_loss + reduce_log_alpha
   log_prob = torch.logsumexp(log_prob, dim=1)
   loss = -log_prob.sum() / float(log_theta.shape[0])
+
+  print(log_theta, log_alpha)
 
   return loss

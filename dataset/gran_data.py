@@ -290,7 +290,7 @@ class GRANData(object):
 
                     # //Johan Add positional predict values, might add generalized solution later
           # //Johan Positional1 contains values to base prediction on, positional2 contains ground truth
-
+          # //Johan Consider what is the most optimal value to represent new nodes, 0 and 1 are actual values it could have for example
           positional1 +=  [
             np.concatenate([np.stack(( x_pos[:jj], y_pos[:jj])),
                                 np.zeros((2, K))], axis=1).astype(np.float64)
@@ -320,7 +320,7 @@ class GRANData(object):
       data['label'] = np.concatenate(label)
       data['att_idx'] = np.concatenate(att_idx)
       data['positional1'] = np.concatenate(positional1, axis=1)
-      data['positional2'] = np.concatenate(positional2, axis=1)
+      data['positional2'] = np.stack(( x_pos[:] , y_pos[:]))
       data['subgraph_idx'] = np.concatenate(subgraph_idx)
       data['subgraph_count'] = subgraph_count
       data['num_nodes'] = num_nodes
@@ -390,7 +390,7 @@ class GRANData(object):
           np.concatenate([bb['positional1'] for bb in batch_pass], axis=0)).long()
 
       data['positional2'] = torch.from_numpy(
-        np.concatenate([bb['positional2'] for bb in batch_pass], axis=0)).long()      
+        np.concatenate([bb['positional2'] for bb in batch_pass], axis=0)).float()      
 
       # shift one position for padding 0-th row feature in the model
       node_idx_feat = np.concatenate(
