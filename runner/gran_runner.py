@@ -256,7 +256,7 @@ class GranRunner(object):
               data['label'] = batch_data[dd][ff]['label'].pin_memory().to(gpu_id, non_blocking=True)
               data['att_idx'] = batch_data[dd][ff]['att_idx'].pin_memory().to(gpu_id, non_blocking=True)
               data['subgraph_idx'] = batch_data[dd][ff]['subgraph_idx'].pin_memory().to(gpu_id, non_blocking=True)
-              data['node_pos'] = batch_data[dd][ff]['positional1'].pin_memory().to(gpu_id, non_blocking=True)
+              data['node_pos'] = batch_data[dd][ff]['positional2'].pin_memory().to(gpu_id, non_blocking=True)
               data['pos_true'] = batch_data[dd][ff]['positional2'].pin_memory().to(gpu_id, non_blocking=True)
               batch_fwd.append((data,))
 
@@ -359,9 +359,9 @@ class GranRunner(object):
         break 
 
       if self.is_single_plot:
-        draw_graph_list(vis_graphs, num_row, num_col, fname=save_name, layout='spring')
+        draw_graph_list(vis_graphs, num_row, num_col, fname=save_name, layout='position')
       else:
-        draw_graph_list_separate(vis_graphs, fname=save_name[:-4], is_single=True, layout='spring')
+        draw_graph_list_separate(vis_graphs, fname=save_name[:-4], is_single=True, layout='position')
 
       save_name = os.path.join(self.config.save_dir, 'train_graphs.png')
 

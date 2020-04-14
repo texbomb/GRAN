@@ -80,7 +80,7 @@ class GNN(nn.Module):
       edge_input = torch.cat([state_diff, edge_feat], dim=1)
     else:
       edge_input = state_diff
-    
+
     # //Johan Think about adding postional data as optional config
     node_pos_diff = (node_pos[: ,edge[:, 0]] - node_pos[:, edge[:, 1]]).float()
 
@@ -284,9 +284,9 @@ class GRANMixtureBernoulli(nn.Module):
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
     # Predics positions from the diff state
-    pos = self.output_pos(node_state)
+    pos = self.output_pos(node_state[[0,2,5],:])
     #print(pos)
-    print(pos)
+
 
     return log_theta, log_alpha, pos
 
@@ -346,7 +346,7 @@ class GRANMixtureBernoulli(nn.Module):
           for bb in range(B)
       ]
       edges = torch.cat(edges, dim=1).t()
-
+      # //johan Test when ii == 0, whether node_pos[bb,:, :ii] or node_pos[bb,:, :jj works best
       if ii == 0:
         tmp_node_pos = [node_pos[bb,:, :ii] for bb in range(B)]
       else:
@@ -392,8 +392,9 @@ class GRANMixtureBernoulli(nn.Module):
       log_theta = self.output_theta(diff)
       log_alpha = self.output_alpha(diff)
 
-      pos = self.output_pos(diff)
-      node_pos[:,:,ii:jj] = pos.reshape(20,2,-1)[:,:,ii:jj]
+      pos = self.output_pos(node_state_out)
+      # node_pos[:,:,ii:jj] = pos.reshape(20,2,-1)[:,:,ii:jj]
+      node_pos[:,:,ii:jj] = pos[:,ii:jj,:].view(20, 2, -1)
 
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
@@ -491,7 +492,7 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      pos_loss = positional_loss(pos_true[:,node_idx_feat], pos_pred, self.pos_loss_func)
+      pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func)
 
       total_loss = total_loss_function(pos_loss, adj_loss) 
 
@@ -508,7 +509,7 @@ class GRANMixtureBernoulli(nn.Module):
       A_list = [
           A[ii, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
       ]
-      print(A_list)
+      #print(A_list)
       return A_list, node_pos
 
 # Total loss -> combined adj and positional loss. Need to be tuned with an alpha 
@@ -519,7 +520,7 @@ def total_loss_function(pos_loss, adj_loss):
   # print(f"adj_loss: {adj_loss}")
 
 
-  total_loss =   adj_loss  #pos_loss * 0.1
+  total_loss =   adj_loss + pos_loss * 0.1
 
   return total_loss
 
@@ -582,6 +583,6 @@ def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
   log_prob = torch.logsumexp(log_prob, dim=1)
   loss = -log_prob.sum() / float(log_theta.shape[0])
 
-  print(log_theta, log_alpha)
+  # print(log_theta, log_alpha)
 
   return loss
