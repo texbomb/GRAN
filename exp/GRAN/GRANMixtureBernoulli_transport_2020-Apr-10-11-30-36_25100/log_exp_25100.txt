@@ -1,6 +1,0 @@
-INFO  | 04/10/2020 11:30:36 AM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-10-11-30-36_25100\log_exp_25100.txt
-INFO  | 04/10/2020 11:30:36 AM | File run_exp.py           | Line 27    | Exp instance id = 25100
-INFO  | 04/10/2020 11:30:36 AM | File run_exp.py           | Line 28    | Exp comment = None
-INFO  | 04/10/2020 11:30:36 AM | File run_exp.py           | Line 29    | Config =
-INFO  | 04/10/2020 11:30:37 AM | File gran_runner.py       | Line 137   | Train/val/test = 8/2/2
-INFO  | 04/10/2020 11:30:37 AM | File gran_runner.py       | Line 150   | No Edges vs. Edges in training set = 2.0
