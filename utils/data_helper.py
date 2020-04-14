@@ -224,7 +224,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
 
 
 # // Oliver, function for importing transport graphs
-def get_transport_graphs(p=r'C:/Users/olive/OneDrive/Dokumenter/GitHub/GRAN/data/triangles'):
+def get_transport_graphs(p=r'C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\helsignoer'):
     # Opens dir and gets number of items in the dir
     folder_items = os.listdir(p) # dir is your directory path
     # Adds every graph to the list of total graphs

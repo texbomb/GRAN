@@ -371,13 +371,13 @@ class GranRunner(object):
             num_row,
             num_col,
             fname=save_name,
-            layout='spring')
+            layout='position')
       else:      
         draw_graph_list_separate(
             self.graphs_train[:self.num_vis],
             fname=save_name[:-4],
             is_single=True,
-            layout='spring')
+            layout='position')
 
     ### Evaluation
     if self.config.dataset.name in ['lobster']:

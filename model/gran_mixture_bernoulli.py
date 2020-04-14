@@ -284,7 +284,7 @@ class GRANMixtureBernoulli(nn.Module):
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
     # Predics positions from the diff state
-    pos = self.output_pos(node_state[[0,2,5],:])
+    pos = self.output_pos(node_state[torch.unique(node_idx_gnn[:,0]),:])
     #print(pos)
 
 
@@ -520,7 +520,7 @@ def total_loss_function(pos_loss, adj_loss):
   # print(f"adj_loss: {adj_loss}")
 
 
-  total_loss =   adj_loss + pos_loss * 0.1
+  total_loss =   adj_loss + pos_loss * 0.01
 
   return total_loss
 
