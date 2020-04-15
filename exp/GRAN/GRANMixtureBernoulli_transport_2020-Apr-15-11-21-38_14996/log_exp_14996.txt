@@ -1,0 +1,17 @@
+INFO  | 04/15/2020 11:21:39 AM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-15-11-21-38_14996\log_exp_14996.txt
+INFO  | 04/15/2020 11:21:39 AM | File run_exp.py           | Line 27    | Exp instance id = 14996
+INFO  | 04/15/2020 11:21:39 AM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 04/15/2020 11:21:39 AM | File run_exp.py           | Line 29    | Config =
+INFO  | 04/15/2020 11:21:39 AM | File gran_runner.py       | Line 139   | Train/val/test = 8/2/2
+INFO  | 04/15/2020 11:21:39 AM | File gran_runner.py       | Line 152   | No Edges vs. Edges in training set = 5.0606060606060606
+ERROR | 04/15/2020 11:21:39 AM | File run_exp.py           | Line 42    | Traceback (most recent call last):
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\run_exp.py", line 40, in main
+    runner.test()
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\runner\gran_runner.py", line 305, in test
+    load_model(model, model_file, self.device)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\utils\train_helper.py", line 48, in load_model
+    model_snapshot = torch.load(file_name, map_location=device)
+  File "C:\Users\olive\Anaconda3\envs\Bachelor\lib\site-packages\torch\serialization.py", line 381, in load
+    f = open(f, 'rb')
+FileNotFoundError: [Errno 2] No such file or directory: 'C:\\Users\\olive\\OneDrive\\Dokumenter\\GitHub\\GRAN\\data\\random\\model_snapshot_0000040.pth'
+

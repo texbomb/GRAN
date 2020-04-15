@@ -93,7 +93,7 @@ def draw_graph_list_separate(G_list,
           node_color='#336699',
           alpha=1,
           linewidths=0,
-          font_size=0)
+          font_size=0)      
       nx.draw_networkx_edges(G, pos, alpha=alpha, width=width)
     else:
       nx.draw_networkx_nodes(
@@ -103,7 +103,8 @@ def draw_graph_list_separate(G_list,
           node_color='#336699',
           alpha=1,
           linewidths=0.2,
-          font_size=1.5)
+          font_size=1.5
+          )
       nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.2)
 
     # Added to set the axis properly 
@@ -121,8 +122,8 @@ def draw_graph_list_separate(G_list,
     y_max = max(y_pos)
 
     plt.draw()
-    plt.xlim(x_min-1, x_max+1)
-    plt.ylim(y_min-1, y_max+1)
+    # plt.xlim(x_min-1, x_max+1)
+    # plt.ylim(y_min-1, y_max+1)
     plt.tight_layout()
     plt.savefig(fname+'_{:03d}.png'.format(i), dpi=300)
     plt.close()

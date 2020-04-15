@@ -1,0 +1,9 @@
+INFO  | 04/14/2020 06:12:42 PM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-14-18-12-42_18024\log_exp_18024.txt
+INFO  | 04/14/2020 06:12:42 PM | File run_exp.py           | Line 27    | Exp instance id = 18024
+INFO  | 04/14/2020 06:12:42 PM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 04/14/2020 06:12:42 PM | File run_exp.py           | Line 29    | Config =
+INFO  | 04/14/2020 06:12:42 PM | File gran_runner.py       | Line 139   | Train/val/test = 8/2/2
+INFO  | 04/14/2020 06:12:42 PM | File gran_runner.py       | Line 152   | No Edges vs. Edges in training set = 120.54326923076923
+INFO  | 04/14/2020 06:14:41 PM | File gran_runner.py       | Line 333   | Average test time per mini-batch = 116.72160863876343
+INFO  | 04/14/2020 06:14:47 PM | File gran_runner.py       | Line 399   | Validation MMD scores of #nodes/degree/clustering/4orbits/spectral are = 0.3631683856282568/-0.1365995820733692/0.7888103128721153/0.0/-0.001513002250942197
+INFO  | 04/14/2020 06:14:47 PM | File gran_runner.py       | Line 400   | Test MMD scores of #nodes/degree/clustering/4orbits/spectral are = 0.3631683856282568/-0.1365995820733692/0.7888103128721153/0.0/-0.001513002250942197

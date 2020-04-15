@@ -1,0 +1,38 @@
+INFO  | 04/14/2020 06:01:25 PM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-14-18-01-25_17840\log_exp_17840.txt
+INFO  | 04/14/2020 06:01:25 PM | File run_exp.py           | Line 27    | Exp instance id = 17840
+INFO  | 04/14/2020 06:01:25 PM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 04/14/2020 06:01:25 PM | File run_exp.py           | Line 29    | Config =
+INFO  | 04/14/2020 06:01:25 PM | File gran_runner.py       | Line 139   | Train/val/test = 8/2/2
+INFO  | 04/14/2020 06:01:25 PM | File gran_runner.py       | Line 152   | No Edges vs. Edges in training set = 120.54326923076923
+INFO  | 04/14/2020 06:01:29 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0001 iteration 00000001 = 0.6392579078674316
+INFO  | 04/14/2020 06:02:00 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0007 iteration 00000050 = 0.08670798689126968
+INFO  | 04/14/2020 06:02:16 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0010
+INFO  | 04/14/2020 06:02:29 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0013 iteration 00000100 = 0.07130245119333267
+INFO  | 04/14/2020 06:02:58 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0019 iteration 00000150 = 0.05574088543653488
+INFO  | 04/14/2020 06:03:06 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0020
+INFO  | 04/14/2020 06:03:32 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0025 iteration 00000200 = 0.034752603620290756
+INFO  | 04/14/2020 06:03:54 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0030
+INFO  | 04/14/2020 06:04:00 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0032 iteration 00000250 = 0.019419915974140167
+INFO  | 04/14/2020 06:04:28 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0038 iteration 00000300 = 0.01644943282008171
+INFO  | 04/14/2020 06:04:39 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0040
+INFO  | 04/14/2020 06:04:58 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0044 iteration 00000350 = 0.07508733868598938
+INFO  | 04/14/2020 06:05:27 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0050 iteration 00000400 = 0.01921217143535614
+INFO  | 04/14/2020 06:05:27 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0050
+INFO  | 04/14/2020 06:05:58 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0057 iteration 00000450 = 0.0230097658932209
+INFO  | 04/14/2020 06:06:17 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0060
+INFO  | 04/14/2020 06:06:30 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0063 iteration 00000500 = 0.014165079221129417
+INFO  | 04/14/2020 06:07:00 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0069 iteration 00000550 = 0.028181618079543114
+INFO  | 04/14/2020 06:07:06 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0070
+INFO  | 04/14/2020 06:07:28 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0075 iteration 00000600 = 0.012869399972259998
+INFO  | 04/14/2020 06:07:51 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0080
+INFO  | 04/14/2020 06:07:57 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0082 iteration 00000650 = 0.010795562528073788
+INFO  | 04/14/2020 06:08:30 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0088 iteration 00000700 = 0.009811322204768658
+INFO  | 04/14/2020 06:08:42 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0090
+INFO  | 04/14/2020 06:08:58 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0094 iteration 00000750 = 0.01411888562142849
+INFO  | 04/14/2020 06:09:27 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0100 iteration 00000800 = 0.010785028338432312
+INFO  | 04/14/2020 06:09:27 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0100
+INFO  | 04/14/2020 06:09:56 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0107 iteration 00000850 = 0.019010918214917183
+INFO  | 04/14/2020 06:10:13 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0110
+INFO  | 04/14/2020 06:10:25 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0113 iteration 00000900 = 0.012369506061077118
+INFO  | 04/14/2020 06:10:55 PM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0119 iteration 00000950 = 0.010394340381026268
+INFO  | 04/14/2020 06:11:02 PM | File gran_runner.py       | Line 286   | Saving Snapshot @ epoch 0120

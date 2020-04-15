@@ -356,7 +356,7 @@ class GranRunner(object):
         CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
         vis_graphs += [CGs[0]]
         #//Johan Husk at slette, lige nu gemmer den kun en graf
-        break 
+         
 
       if self.is_single_plot:
         draw_graph_list(vis_graphs, num_row, num_col, fname=save_name, layout='position')

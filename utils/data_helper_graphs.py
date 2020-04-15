@@ -224,7 +224,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
 
 
 # // Oliver, function for importing transport graphs
-def get_transport_graphs(data_dir='../data/triangles'):
+def get_transport_graphs(data_dir='../data/metro'):
     # Opens dir and gets number of items in the dir
     folder_items = os.listdir(data_dir) # dir is your directory path
     number_of_files = len(folder_items)

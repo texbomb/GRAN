@@ -394,7 +394,7 @@ class GRANMixtureBernoulli(nn.Module):
 
       pos = self.output_pos(node_state_out)
       # node_pos[:,:,ii:jj] = pos.reshape(20,2,-1)[:,:,ii:jj]
-      node_pos[:,:,ii:jj] = pos[:,ii:jj,:].view(20, 2, -1)
+      node_pos[:,:,ii:jj] = pos[:,ii:jj,:].view(B, 2, -1)
 
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L

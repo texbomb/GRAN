@@ -1,0 +1,17 @@
+INFO  | 04/15/2020 10:13:20 AM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-15-10-13-20_11628\log_exp_11628.txt
+INFO  | 04/15/2020 10:13:20 AM | File run_exp.py           | Line 27    | Exp instance id = 11628
+INFO  | 04/15/2020 10:13:20 AM | File run_exp.py           | Line 28    | Exp comment = None
+INFO  | 04/15/2020 10:13:20 AM | File run_exp.py           | Line 29    | Config =
+INFO  | 04/15/2020 10:13:20 AM | File gran_runner.py       | Line 139   | Train/val/test = 8/2/2
+INFO  | 04/15/2020 10:13:20 AM | File gran_runner.py       | Line 152   | No Edges vs. Edges in training set = 18.88235294117647
+ERROR | 04/15/2020 10:13:20 AM | File run_exp.py           | Line 42    | Traceback (most recent call last):
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\run_exp.py", line 38, in main
+    runner.train()
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\runner\gran_runner.py", line 176, in train
+    train_dataset = eval(self.dataset_conf.loader_name)(self.config, self.graphs_train, tag='train')
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\dataset\gran_data.py", line 50, in __init__
+    data = self._get_graph_data(G)
+  File "c:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\dataset\gran_data.py", line 105, in _get_graph_data
+    node_x_list_bfs.append(G.nodes(data=True)[node_list_bfs[i]]["x"])
+KeyError: 'x'
+

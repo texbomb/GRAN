@@ -12,23 +12,26 @@ import pickle
 import matplotlib.pyplot as plt
 import os
 
-os.chdir("../data/triangles")
+os.chdir("../data/square")
 
 # Creates graph
 def create_graph():
     G = nx.Graph()
     
-    G.add_node(1, x=100, y=200)
-    G.add_node(2, x=250, y=30)
-    G.add_node(3, x=20, y=150)
+    G.add_node(1, x=10, y=10)
+    G.add_node(2, x=10, y=20)
+    G.add_node(3, x=20, y=10)
+
     
     G.add_edge(1, 2)
     G.add_edge(1, 3)
-    G.add_edge(2, 3)
-    
+    G.add_edge(2, 3)    
+
     return G
 
 G = create_graph()
+
+G.nodes(data=True)
 
 # Gets positions of a graph
 def get_pos(G):
@@ -62,17 +65,34 @@ def plot_graphs(G):
     
     plt.figure(figsize=(10, 10))
     nx.draw(G, pos)
-    plt.xlim(x_min-1, x_max+1)
-    plt.ylim(y_min-1, y_max+1)
+    plt.xlim(x_min-x_min*0.1, x_max+x_max*0.1)
+    plt.ylim(y_min-y_min*0.1, y_max+y_max*0.1)
     plt.show()
 
-plot_graphs(create_graph())
+G =  nx.geographical_threshold_graph(20, 15)
+
+def pos_to_xy(G):
+    for n in range(len(G.nodes(data=True))):
+        G.nodes(data=True)[n]["x"] = G.nodes(data=True)[n]["pos"][0]
+        G.nodes(data=True)[n]["y"] = G.nodes(data=True)[n]["pos"][1]
+
+pos_to_xy(G)
+    
+plot_graphs(G)
+
+# Create x number of graphs and saves them
+def save_graphs(graph, num_graphs):
+    for n in range(num_graphs):
+        G = graph
+        with open(f'train_square{n}.pickle', 'wb') as handle:
+            pickle.dump(G, handle)
+            
 
 # Create x number of graphs and saves them
 def create_graphs(num_graphs):
     for n in range(num_graphs):
         G = create_graph()
-        with open(f'train_big{n}.pickle', 'wb') as handle:
+        with open(f'train_square{n}.pickle', 'wb') as handle:
             pickle.dump(G, handle)
             
 create_graphs(10)
@@ -104,3 +124,16 @@ def pos_list_to_dict(pos):
     for i, p in enumerate(pos):
         dict_pos[i] = {"x": p[0], "y": p[1]}
     return dict_pos
+
+def create_triangles():
+    G = nx.Graph()
+    
+    G.add_node(1, x=10, y=10)
+    G.add_node(2, x=10, y=20)
+    G.add_node(3, x=20, y=10)
+    
+    G.add_edge(1, 2)
+    G.add_edge(1, 3)
+    G.add_edge(2, 3)    
+
+    return G
