@@ -1,8 +1,0 @@
-INFO  | 04/15/2020 10:52:08 AM | File run_exp.py           | Line 26    | Writing log file to exp/GRAN\GRANMixtureBernoulli_transport_2020-Apr-15-10-52-08_20356\log_exp_20356.txt
-INFO  | 04/15/2020 10:52:08 AM | File run_exp.py           | Line 27    | Exp instance id = 20356
-INFO  | 04/15/2020 10:52:08 AM | File run_exp.py           | Line 28    | Exp comment = None
-INFO  | 04/15/2020 10:52:08 AM | File run_exp.py           | Line 29    | Config =
-INFO  | 04/15/2020 10:52:09 AM | File gran_runner.py       | Line 139   | Train/val/test = 8/2/2
-INFO  | 04/15/2020 10:52:09 AM | File gran_runner.py       | Line 152   | No Edges vs. Edges in training set = 2.0
-INFO  | 04/15/2020 10:52:13 AM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0001 iteration 00000001 = 0.8345629572868347
-INFO  | 04/15/2020 10:52:26 AM | File gran_runner.py       | Line 282   | NLL Loss @ epoch 0007 iteration 00000050 = 0.23853851854801178

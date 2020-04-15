@@ -11,21 +11,22 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import os
+import math
 
-os.chdir("../data/square")
+os.chdir(r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\random")
 
 # Creates graph
 def create_graph():
     G = nx.Graph()
     
-    G.add_node(1, x=10, y=10)
-    G.add_node(2, x=10, y=20)
-    G.add_node(3, x=20, y=10)
+    G.add_node(0, x=10, y=10)
+    G.add_node(1, x=10, y=20)
+    G.add_node(2, x=20, y=10)
 
     
-    G.add_edge(1, 2)
-    G.add_edge(1, 3)
-    G.add_edge(2, 3)    
+    G.add_edge(0, 1)
+    G.add_edge(0, 2)
+    G.add_edge(1, 2)    
 
     return G
 
@@ -69,14 +70,20 @@ def plot_graphs(G):
     plt.ylim(y_min-y_min*0.1, y_max+y_max*0.1)
     plt.show()
 
-G =  nx.geographical_threshold_graph(20, 15)
+G =  nx.geographical_threshold_graph(50, 10)
 
 def pos_to_xy(G):
+    new_g = nx.Graph()
     for n in range(len(G.nodes(data=True))):
-        G.nodes(data=True)[n]["x"] = G.nodes(data=True)[n]["pos"][0]
-        G.nodes(data=True)[n]["y"] = G.nodes(data=True)[n]["pos"][1]
+        x = G.nodes(data=True)[n]["pos"][0]
+        y = G.nodes(data=True)[n]["pos"][1]
+        new_g.add_node(n, x = x, y = y)
+    for e in G.edges:
+        new_g.add_edge(e[0], e[1])
+    
+    return new_g
 
-pos_to_xy(G)
+G = pos_to_xy(G)
     
 plot_graphs(G)
 
@@ -84,9 +91,10 @@ plot_graphs(G)
 def save_graphs(graph, num_graphs):
     for n in range(num_graphs):
         G = graph
-        with open(f'train_square{n}.pickle', 'wb') as handle:
+        with open(f'train_random_20{n}.pickle', 'wb') as handle:
             pickle.dump(G, handle)
             
+save_graphs(G, 10)
 
 # Create x number of graphs and saves them
 def create_graphs(num_graphs):
@@ -137,3 +145,44 @@ def create_triangles():
     G.add_edge(2, 3)    
 
     return G
+
+def rotate_graph(G,angle, point = 'in_place'):
+    """
+    Rotates a networkx graph object around a point with a given angle in degrees
+    Rotates clockwise around the specified point, if nothing is given, rotate in place.
+    Returns a new networkX graph with the rotated object
+    """
+    angle *= math.pi / 180
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+
+    if point == 'in_place':
+        point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+
+    for key in dic:    
+        dic[key]['x'] =  round(math.cos(angle) * (dic[key]['x']-point[0]) -  math.sin(angle) * (dic[key]['y']-point[1]) + point[0] )
+
+        dic[key]['y'] =  round(math.sin(angle) * (dic[key]['x']-point[0]) + math.cos(angle) * (dic[key]['y']-point[1]) + point[1] )
+
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H.nodes(data=True)
+
+def scale_graph(G, scale, in_place = True):
+    """
+    Scales a networkx graph object by scaling the distance from each node to the center of the graph by 'scale'.
+    If in_place is set to true, scales the graph in place
+    """
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+
+    if in_place:
+         point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+    else:
+        point = (0,0)
+    for key in dic:    
+        dic[key]['x'] =  ( dic[key]['x'] - point[0] ) * scale + point[0]
+
+        dic[key]['y'] =  ( dic[key]['y'] - point[1] ) * scale + point[1]
+
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H

@@ -355,7 +355,7 @@ class GranRunner(object):
         CGs = [gg.subgraph(c) for c in nx.connected_components(gg)]
         CGs = sorted(CGs, key=lambda x: x.number_of_nodes(), reverse=True)
         vis_graphs += [CGs[0]]
-        #//Johan Husk at slette, lige nu gemmer den kun en graf
+
          
 
       if self.is_single_plot:
