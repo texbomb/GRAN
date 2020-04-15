@@ -12,6 +12,7 @@ import pickle
 import matplotlib.pyplot as plt
 import os
 import math
+import copy
 
 os.chdir(r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\random")
 
@@ -33,6 +34,47 @@ def create_graph():
 G = create_graph()
 
 G.nodes(data=True)
+def rotate_graph(G,angle, point = 'in_place'):
+    """
+    Rotates a networkx graph object around a point with a given angle in degrees
+    Rotates clockwise around the specified point, if nothing is given, rotate in place.
+    Returns a new networkX graph with the rotated object
+    """
+    angle *= math.pi / 180
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+
+    if point == 'in_place':
+        point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+
+    for key in dic:    
+        dic[key]['x'] =  round(math.cos(angle) * (dic[key]['x']-point[0]) -  math.sin(angle) * (dic[key]['y']-point[1]) + point[0] )
+
+        dic[key]['y'] =  round(math.sin(angle) * (dic[key]['x']-point[0]) + math.cos(angle) * (dic[key]['y']-point[1]) + point[1] )
+
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H.nodes(data=True)
+
+def scale_graph(G, scale, in_place = True):
+    """
+    Scales a networkx graph object by scaling the distance from each node to the center of the graph by 'scale'.
+    If in_place is set to true, scales the graph in place
+    """
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+
+    if in_place:
+         point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+    else:
+        point = (0,0)
+    for key in dic:    
+        dic[key]['x'] =  ( dic[key]['x'] - point[0] ) * scale + point[0]
+
+        dic[key]['y'] =  ( dic[key]['y'] - point[1] ) * scale + point[1]
+
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H
+
 
 # Gets positions of a graph
 def get_pos(G):
