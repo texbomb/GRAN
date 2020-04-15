@@ -11,6 +11,8 @@ import numpy as np
 import pickle
 import matplotlib.pyplot as plt
 import os
+import math
+import copy
 
 os.chdir("../data/triangles")
 
@@ -18,17 +20,61 @@ os.chdir("../data/triangles")
 def create_graph():
     G = nx.Graph()
     
-    G.add_node(1, x=100, y=200)
-    G.add_node(2, x=250, y=30)
-    G.add_node(3, x=20, y=150)
+    G.add_node(1, x=100, y=300)
+    G.add_node(2, x=300, y=100)
+    G.add_node(3, x=100, y=100)
+    G.add_node(4, x=300, y=300)
     
     G.add_edge(1, 2)
     G.add_edge(1, 3)
-    G.add_edge(2, 3)
+    G.add_edge(2, 4)
+    G.add_edge(4,3)
     
     return G
 
 G = create_graph()
+
+def rotate_graph(G,angle, point = 'in_place'):
+    """
+    Rotates a networkx graph object around a point with a given angle in degrees
+    Rotates clockwise around the specified point, if nothing is given, rotate in place.
+    Returns a new networkX graph with the rotated object
+    """
+    angle *= math.pi / 180
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+
+    if point == 'in_place':
+        point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+
+    for key in dic:    
+        dic[key]['x'] =  round(math.cos(angle) * (dic[key]['x']-point[0]) -  math.sin(angle) * (dic[key]['y']-point[1]) + point[0] )
+
+        dic[key]['y'] =  round(math.sin(angle) * (dic[key]['x']-point[0]) + math.cos(angle) * (dic[key]['y']-point[1]) + point[1] )
+
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H.nodes(data=True)
+
+def scale_graph(G, scale, in_place = True):
+    """
+    Scales a networkx graph object by scaling the distance from each node to the center of the graph by 'scale'.
+    If in_place is set to true, scales the graph in place
+    """
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+
+    if in_place:
+         point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+    else:
+        point = (0,0)
+    for key in dic:    
+        dic[key]['x'] =  ( dic[key]['x'] - point[0] ) * scale + point[0]
+
+        dic[key]['y'] =  ( dic[key]['y'] - point[1] ) * scale + point[1]
+
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H
+
 
 # Gets positions of a graph
 def get_pos(G):
