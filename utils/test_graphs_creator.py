@@ -20,9 +20,14 @@ os.chdir(r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\random")
 def create_graph():
     G = nx.Graph()
     
-    G.add_node(0, x=10, y=10)
-    G.add_node(1, x=10, y=20)
-    G.add_node(2, x=20, y=10)
+    G.add_node(1, x=10, y=10)
+    G.add_node(2, x=20, y=20)
+    G.add_node(3, x=10, y=20)
+ 
+    
+    G.add_edge(1, 2)
+    G.add_edge(1, 3)
+    G.add_edge(2, 3)
 
     
     G.add_edge(0, 1)
@@ -31,29 +36,37 @@ def create_graph():
 
     return G
 
-G = create_graph()
+G = create_graph() 
 
-G.nodes(data=True)
-def rotate_graph(G,angle, point = 'in_place'):
+def rotate_graph(G, degrees=0, point= 'in_place'):
     """
     Rotates a networkx graph object around a point with a given angle in degrees
     Rotates clockwise around the specified point, if nothing is given, rotate in place.
     Returns a new networkX graph with the rotated object
     """
-    angle *= math.pi / 180
+    points = []
     dic = copy.deepcopy( dict(G.nodes(data=True)) )
+    for key in dic:  
+        points.append((dic[key]['x'],dic[key]['y']))
 
     if point == 'in_place':
         point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
-
-    for key in dic:    
-        dic[key]['x'] =  round(math.cos(angle) * (dic[key]['x']-point[0]) -  math.sin(angle) * (dic[key]['y']-point[1]) + point[0] )
-
-        dic[key]['y'] =  round(math.sin(angle) * (dic[key]['x']-point[0]) + math.cos(angle) * (dic[key]['y']-point[1]) + point[1] )
-
+    angle = np.deg2rad(degrees)
+    R = np.array([[np.cos(angle), -np.sin(angle)],
+                  [np.sin(angle),  np.cos(angle)]])
+    o = np.atleast_2d(point)
+    p = np.atleast_2d(points)
+    new_points = np.squeeze((R @ (p.T-o.T) + o.T).T)
+    for key in dic:  
+        dic[key]['x'] = round(new_points[key-1][0])
+        dic[key]['y'] = round(new_points[key-1][1])
     H = copy.deepcopy(G)
     nx.set_node_attributes(H,dic)
-    return H.nodes(data=True)
+    return H
+    #def Rotate2D(pts,cnt,ang=pi/4):
+    #'''pts = {} Rotates points(nx2) about center cnt(2) by angle ang(1) in radian'''
+    #return dot(pts-cnt,ar([[cos(ang),sin(ang)],[-sin(ang),cos(ang)]]))+cnt
+
 
 def scale_graph(G, scale, in_place = True):
     """
