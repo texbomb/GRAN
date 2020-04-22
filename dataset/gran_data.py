@@ -254,12 +254,12 @@ class GRANData(object):
           # exist node: 0
           # newly added node: 1, ..., K
           if jj == 0:
-            att_idx += [np.arange(1, K + 1).astype(np.uint8)]
+            att_idx += [np.arange(1, K + 1).astype(np.bool)]
           else:
             att_idx += [
                 np.concatenate([
-                    np.zeros(jj).astype(np.uint8),
-                    np.arange(1, K + 1).astype(np.uint8)
+                    np.zeros(jj).astype(np.bool),
+                    np.arange(1, K + 1).astype(np.bool)
                 ])
             ]
 
@@ -285,7 +285,7 @@ class GRANData(object):
 
           ### get predict label
           label += [
-              adj_full[idx_row_gnn, idx_col_gnn].flatten().astype(np.uint8)
+              adj_full[idx_row_gnn, idx_col_gnn].flatten().astype(np.bool)
           ]
 
                     # //Johan Add positional predict values, might add generalized solution later
@@ -319,7 +319,7 @@ class GRANData(object):
       data['node_idx_feat'] = np.concatenate(node_idx_feat)
       data['label'] = np.concatenate(label)
       data['att_idx'] = np.concatenate(att_idx)
-      data['positional1'] = np.concatenate(positional1, axis=1)
+      data['positional1'] = np.concatenate(positional2, axis=1)
       data['positional2'] = np.stack(( x_pos[:] , y_pos[:]))
       data['subgraph_idx'] = np.concatenate(subgraph_idx)
       data['subgraph_count'] = subgraph_count
@@ -387,7 +387,7 @@ class GRANData(object):
           np.concatenate([bb['att_idx'] for bb in batch_pass], axis=0)).long()
 
       data['positional1'] = torch.from_numpy(
-          np.concatenate([bb['positional1'] for bb in batch_pass], axis=0)).long()
+          np.concatenate([bb['positional1'] for bb in batch_pass], axis=0)).float()
 
       data['positional2'] = torch.from_numpy(
         np.concatenate([bb['positional2'] for bb in batch_pass], axis=0)).float()      
