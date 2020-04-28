@@ -88,6 +88,8 @@ def scale_graph(G, scale, in_place = True):
     nx.set_node_attributes(H,dic)
     return H
 
+G = nx.random_geometric_graph(10, 10)
+
 
 # Gets positions of a graph
 def get_pos(G):

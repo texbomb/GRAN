@@ -10,7 +10,7 @@ seed: 1234
 dataset:
   loader_name: GRANData
   name: transport
-  data_path: data/NY
+  data_path: data/random100
   node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
@@ -27,8 +27,8 @@ model:
   block_size: 1
   sample_stride: 1
   max_num_nodes: 124
-  hidden_dim: 256
-  embedding_dim: 128
+  hidden_dim: 256 # Skal være ens med embedding_Dim
+  embedding_dim: 256
   num_GNN_layers: 7
   num_GNN_prop: 1
   num_canonical_order: 1
@@ -45,7 +45,7 @@ train:
   display_iter: 50
   snapshot_epoch: 10
   valid_epoch: 10
-  lr: 1.0e-3
+  lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
@@ -63,5 +63,5 @@ test:
   num_vis: 10
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Apr-22-14-38-52_10072
-  test_model_name: model_snapshot_0000200.pth
+  test_model_dir: C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Apr-28-15-40-37_21560
+  test_model_name: model_snapshot_0001570.pth
