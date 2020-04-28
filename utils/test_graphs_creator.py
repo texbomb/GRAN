@@ -14,7 +14,7 @@ import os
 import math
 import copy
 
-os.chdir(r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\random")
+os.chdir(r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\random50")
 
 # Creates graph
 def create_graph():
@@ -88,7 +88,11 @@ def scale_graph(G, scale, in_place = True):
     nx.set_node_attributes(H,dic)
     return H
 
-G = nx.random_geometric_graph(10, 10)
+G = nx.waxman_graph(40, alpha=0.3, beta=0.6, L=1, domain=(0, 0, 1, 1))
+
+G = pos_to_xy(G)
+    
+plot_graphs(G)
 
 
 # Gets positions of a graph
