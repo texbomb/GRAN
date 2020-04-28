@@ -5,12 +5,12 @@ runner: GranRunner
 use_horovod: false
 use_gpu: true
 device: cuda:0
-gpus: [0]
+gpus: [0, 1]
 seed: 1234
 dataset:
   loader_name: GRANData
   name: transport
-  data_path: data/random100
+  data_path: data/us_cities
   node_order: DFS # k_core/BFS/degree_decent
   train_ratio: 0.8
   dev_ratio: 0.2
@@ -26,10 +26,10 @@ model:
   is_sym: true
   block_size: 1
   sample_stride: 1
-  max_num_nodes: 124
+  max_num_nodes: 150
   hidden_dim: 256 # Skal være ens med embedding_Dim
   embedding_dim: 256
-  num_GNN_layers: 7
+  num_GNN_layers: 9
   num_GNN_prop: 1
   num_canonical_order: 1
   dimension_reduce: true
@@ -40,11 +40,11 @@ train:
   lr_decay: 0.3
   lr_decay_epoch: [100000000] # no decay
   num_workers: 0
-  max_epoch: 3000
+  max_epoch: 30000
   batch_size: 1
-  display_iter: 50
-  snapshot_epoch: 10
-  valid_epoch: 10
+  display_iter: 100
+  snapshot_epoch: 500
+  valid_epoch: 100
   lr: 1.0e-4
   wd: 0.0e-4
   momentum: 0.9

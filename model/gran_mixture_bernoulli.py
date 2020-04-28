@@ -186,6 +186,8 @@ class GRANMixtureBernoulli(nn.Module):
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
+        nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, 2))
 
     self.output_alpha = nn.Sequential(
