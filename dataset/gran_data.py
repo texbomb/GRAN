@@ -390,7 +390,14 @@ class GRANData(object):
           np.concatenate([bb['positional1'] for bb in batch_pass], axis=0)).float()
 
       data['positional2'] = torch.from_numpy(
-        np.concatenate([bb['positional2'] for bb in batch_pass], axis=0)).float()      
+          np.concatenate(
+              [
+                  np.pad(
+                      bb['positional2'], ((0, 0), (0, pad_size[ii])),
+                      'constant',
+                      constant_values=0.0) for ii, bb in enumerate(batch_pass)
+              ],
+              axis=1)).float()    
 
       # shift one position for padding 0-th row feature in the model
       node_idx_feat = np.concatenate(
