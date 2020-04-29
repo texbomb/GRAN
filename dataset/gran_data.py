@@ -387,7 +387,7 @@ class GRANData(object):
           np.concatenate([bb['att_idx'] for bb in batch_pass], axis=0)).long()
 
       data['positional1'] = torch.from_numpy(
-          np.concatenate([bb['positional1'] for bb in batch_pass], axis=0)).float()
+          np.concatenate([bb['positional1'] for bb in batch_pass], axis=1)).float()
 
       data['positional2'] = torch.from_numpy(
           np.concatenate(
