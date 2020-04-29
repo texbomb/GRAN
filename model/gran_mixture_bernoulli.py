@@ -288,7 +288,7 @@ class GRANMixtureBernoulli(nn.Module):
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
     # Predics positions from the diff state
-    pos = self.output_pos(node_state)
+    pos = self.output_pos(node_state[node_idx_feat==0])
     #print(pos)
 
 
@@ -496,7 +496,7 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func)
+      pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func, node_idx_feat)
 
       total_loss = total_loss_function(pos_loss, adj_loss) 
 
@@ -531,7 +531,7 @@ def total_loss_function(pos_loss, adj_loss):
 
 # Positional loss function - RMSE loss between predicted and true positions
 
-def positional_loss(pos_true, pos_pred, pos_loss_func):
+def positional_loss(pos_true, pos_pred, pos_loss_func, node_idx_feat):
   """
     Args:
       pos_true: N X 2, Ground truth positional values
@@ -544,8 +544,7 @@ def positional_loss(pos_true, pos_pred, pos_loss_func):
   """
   pos_true = torch.t(pos_true).float()
   
-  pos_loss = torch.sqrt(pos_loss_func(pos_true, pos_pred))
-
+  pos_loss = torch.sqrt(pos_loss_func(pos_true[node_idx_feat==0], pos_pred))
   return pos_loss
 
   
