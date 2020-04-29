@@ -171,7 +171,7 @@ class GRANMixtureBernoulli(nn.Module):
     self.num_canonical_order = config.model.num_canonical_order
     self.output_dim = 1
     self.num_mix_component = config.model.num_mix_component
-    self.has_rand_feat = False # use random feature instead of 1-of-K encoding
+    self.has_rand_feat = True # use random feature instead of 1-of-K encoding
     self.att_edge_dim = 64
 
     self.output_theta = nn.Sequential(

@@ -4,8 +4,8 @@ exp_dir: exp/GRAN
 runner: GranRunner
 use_horovod: false
 use_gpu: true
-device: cuda:1
-gpus: [1]
+device: cuda:0
+gpus: [0, 1]
 seed: 1234
 dataset:
   loader_name: GRANData
@@ -27,10 +27,10 @@ model:
   block_size: 1
   sample_stride: 1
   max_num_nodes: 150
-  hidden_dim: 256 # Skal være ens med embedding_Dim
-  embedding_dim: 256
+  hidden_dim: 1024 # Skal være ens med embedding_Dim
+  embedding_dim: 1024
   num_GNN_layers: 9
-  num_GNN_prop: 1
+  num_GNN_prop: 3
   num_canonical_order: 1
   dimension_reduce: true
   has_attention: true
@@ -38,7 +38,7 @@ model:
 train:
   optimizer: Adam
   lr_decay: 0.3
-  lr_decay_epoch: [100000000] # no decay
+  lr_decay_epoch: [2000] # no decay
   num_workers: 0
   max_epoch: 30000
   batch_size: 1
