@@ -261,18 +261,26 @@ class GranRunner(object):
               batch_fwd.append((data,))
 
           if batch_fwd:
-            train_loss = model(*batch_fwd).mean()              
-            avg_train_loss += train_loss              
-
-            # assign gradient
+            train_loss, adj_loss, pos_loss = model(*batch_fwd)            
+            avg_train_loss += train_loss 
+            avg_adj_loss += adj_loss
+            avg_pos_loss += pos_loss 
+                 
             train_loss.backward()
         
         # clip_grad_norm_(model.parameters(), 5.0e-0)
         optimizer.step()
         avg_train_loss /= float(self.dataset_conf.num_fwd_pass)
-        
+        avg_adj_loss /= float(self.dataset_conf.num_fwd_pass)
+        avg_pos_loss /= float(self.dataset_conf.num_fwd_pass)
         # reduce
         train_loss = float(avg_train_loss.data.cpu().numpy())
+        adj_loss = float(avg_adj_loss.data.cpu().numpy())
+        pos_loss = float(avg_pos_loss.data.cpu().numpy())
+        
+        self.writer.add_scalar('train_loss', train_loss, iter_count)
+        self.writer.add_scalar('adj_loss', adj_loss, iter_count) 
+        self.writer.add_scalar('pos_loss', pos_loss, iter_count) 
         
         self.writer.add_scalar('train_loss', train_loss, iter_count)
         results['train_loss'] += [train_loss]
