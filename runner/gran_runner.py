@@ -203,21 +203,21 @@ class GranRunner(object):
       step_size_up=1000)
     elif self.train_conf.optimizer == 'Adam':
       optimizer = optim.Adam(params, lr=self.train_conf.lr, weight_decay=self.train_conf.wd)
-      lr_scheduler = optim.lr_scheduler.CyclicLR(
-      optimizer, 
-      base_lr=1.0e-4, 
-      max_lr=1.0e-2,
-      step_size_up=1000,
-      cycle_momentum=False)
+      # lr_scheduler = optim.lr_scheduler.CyclicLR(
+      # optimizer, 
+      # base_lr=1.0e-4, 
+      # max_lr=1.0e-2,
+      # step_size_up=1000,
+      # cycle_momentum=False)
     else:
       raise ValueError("Non-supported optimizer!")
 
     early_stop = EarlyStopper([0.0], win_size=100, is_decrease=False)
     # Normal scheduler
-    # lr_scheduler = optim.lr_scheduler.MultiStepLR(
-    #     optimizer,
-    #     milestones=self.train_conf.lr_decay_epoch,
-    #     gamma=self.train_conf.lr_decay)
+    lr_scheduler = optim.lr_scheduler.MultiStepLR(
+        optimizer,
+        milestones=self.train_conf.lr_decay_epoch,
+        gamma=self.train_conf.lr_decay)
     # reset gradient
     optimizer.zero_grad()
 
