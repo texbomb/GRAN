@@ -316,7 +316,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
-    node_pos = torch.zeros((B, 2, N_pad)).to(self.device)
+    node_pos = torch.zeros((B, N_pad, 2)).to(self.device)
 
     for ii in range(0, N_pad, S):
       # for ii in range(0, 3530, S):
