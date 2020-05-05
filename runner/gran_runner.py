@@ -242,7 +242,9 @@ class GranRunner(object):
             iter_count += 1
         
         
-        avg_train_loss = .0        
+        avg_train_loss = .0   
+        avg_adj_loss = .0
+        avg_pos_loss = .0     
         for ff in range(self.dataset_conf.num_fwd_pass):
           batch_fwd = []
           

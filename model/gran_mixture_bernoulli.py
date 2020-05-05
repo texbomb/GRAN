@@ -183,10 +183,13 @@ class GRANMixtureBernoulli(nn.Module):
     
     self.output_pos = nn.Sequential(
         nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.BatchNorm1d(self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.BatchNorm1d(self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.BatchNorm1d(self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, 2))
 

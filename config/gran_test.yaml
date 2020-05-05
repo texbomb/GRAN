@@ -5,7 +5,7 @@ runner: GranRunner
 use_horovod: false
 use_gpu: true
 device: cuda:0
-gpus: [0, 1]
+gpus: [0]
 seed: 1234
 dataset:
   loader_name: GRANData
@@ -27,8 +27,8 @@ model:
   block_size: 1
   sample_stride: 1
   max_num_nodes: 150
-  hidden_dim: 1024 # Skal være ens med embedding_Dim
-  embedding_dim: 1024
+  hidden_dim: 256 # Skal være ens med embedding_Dim
+  embedding_dim: 256
   num_GNN_layers: 9
   num_GNN_prop: 3
   num_canonical_order: 1
