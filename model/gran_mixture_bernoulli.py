@@ -316,7 +316,7 @@ class GRANMixtureBernoulli(nn.Module):
 
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
-    node_pos = torch.zeros((B, N_pad, 2)).to(self.device)
+    node_pos = torch.zeros((B, 2, N_pad)).to(self.device)
 
     for ii in range(0, N_pad, S):
       # for ii in range(0, 3530, S):
@@ -355,14 +355,14 @@ class GRANMixtureBernoulli(nn.Module):
       edges = torch.cat(edges, dim=1).t()
       # //johan Test when ii == 0, whether node_pos[bb,:, :ii] or node_pos[bb,:, :jj works best
       if ii == 0:
-        tmp_node_pos = [node_pos[bb,:ii, :] for bb in range(B)]
+        tmp_node_pos = [node_pos[bb, :, :ii] for bb in range(B)]
       else:
-        tmp_node_pos = [node_pos[bb,:jj, :] for bb in range(B)]
+        tmp_node_pos = [node_pos[bb, :, :jj] for bb in range(B)]
 
         # tmp_node_pos = [torch.cat((node_pos[bb,:, :ii], node_pos[bb,:,ii].reshape(1, -1)), dim=0) for bb in range(B)]
       #tmp_node_pos = [node_pos[bb,:, :ii] for bb in range(B)]
 
-      tmp_node_pos = torch.cat(tmp_node_pos, dim=0)  
+      tmp_node_pos = torch.cat(tmp_node_pos, dim=1)  
 
 
       att_idx = torch.cat([torch.zeros(ii).long(),
