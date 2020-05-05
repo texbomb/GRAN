@@ -400,8 +400,7 @@ class GRANMixtureBernoulli(nn.Module):
       log_alpha = self.output_alpha(diff)
 
       pos = self.output_pos(node_state_out.view(-1, node_state.shape[2]))
-
-      node_pos[:,ii:jj,:] = pos.reshape(B, -1, 2)[:,ii:jj,:]
+      node_pos[:,:,ii:jj] = pos.reshape(B, -1, 2)[:,ii:jj,:].view(B,2,-1)
 
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
