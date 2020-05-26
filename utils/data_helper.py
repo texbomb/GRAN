@@ -173,7 +173,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
       for j in range(3, 9):
         graphs.append(nx.grid_2d_graph(i, j))
   elif graph_type == "transport":
-      graphs = get_transport_graphs()
+      graphs = get_transport_graphs(data_dir)
 
   elif graph_type == 'lobster':
     graphs = []
@@ -224,7 +224,7 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
 
 
 # // Oliver, function for importing transport graphs
-def get_transport_graphs(p=r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\square_middle"):
+def get_transport_graphs(p=r'data\square_middle'):
     # Opens dir and gets number of items in the dir
     folder_items = os.listdir(p) # dir is your directory path
     # Adds every graph to the list of total graphs
@@ -237,6 +237,5 @@ def get_transport_graphs(p=r"C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data
               graphs.append(graph)    
     return graphs
     
-get_transport_graphs()
+#get_transport_graphs()
 # /home/fakecity/GRAN/data/us_cities'
-# C:\Users\olive\OneDrive\Dokumenter\GitHub\GRAN\data\us_cities_2

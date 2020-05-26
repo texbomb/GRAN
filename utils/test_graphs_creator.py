@@ -27,12 +27,7 @@ def create_graph():
     
     G.add_edge(1, 2)
     G.add_edge(1, 3)
-    G.add_edge(2, 3)
-
-    
-    G.add_edge(0, 1)
-    G.add_edge(0, 2)
-    G.add_edge(1, 2)    
+    G.add_edge(2, 3)  
 
     return G
 
@@ -88,6 +83,23 @@ def scale_graph(G, scale, in_place = True):
     nx.set_node_attributes(H,dic)
     return H
 
+def move_graph(G, x, y, relative=True):
+    """
+    Moves a networkx graph object by a set distance for every point, either relative to current position or a fixed move.
+    If relative is set to true, shifts the graphs position with x,y coordinates.
+    If relative is set to false, moves the graph, so the new center of the polygon is at the x,y coordinates. 
+    """
+    dic = copy.deepcopy( dict(G.nodes(data=True)) )
+    point = ( sum(d['x'] for d in dic.values() if d) / len(dic.keys()), sum(d['y'] for d in dic.values() if d) / len(dic.keys())  )
+    for key in dic:    
+        dic[key]['x'] =  dic[key]['x'] +  x -  (1 - relative) * point[0]
+
+        dic[key]['y'] =  dic[key]['y'] +   y - (1 - relative) * point[1]
+    H = copy.deepcopy(G)
+    nx.set_node_attributes(H,dic)
+    return H
+    
+     
 G = nx.waxman_graph(40, alpha=0.3, beta=0.6, L=1, domain=(0, 0, 1, 1))
 
 G = pos_to_xy(G)
