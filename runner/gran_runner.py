@@ -137,7 +137,6 @@ class GranRunner(object):
 
     logger.info('Train/val/test = {}/{}/{}'.format(self.num_train, self.num_dev,
                                                    self.num_test_gt))
-
     ### shuffle all graphs
     if self.is_shuffle:
       self.npr = np.random.RandomState(self.seed)
@@ -253,9 +252,10 @@ class GranRunner(object):
             iter_count += 1
         
         
-        avg_train_loss = .0   
+        avg_train_loss = .0
         avg_adj_loss = .0
-        avg_pos_loss = .0     
+        for attribute in self.config.attributes:
+          exec('avg_' + attribute + '_loss = .0')      
         for ff in range(self.dataset_conf.num_fwd_pass):
           batch_fwd = []
           
@@ -269,33 +269,52 @@ class GranRunner(object):
               data['label'] = batch_data[dd][ff]['label'].pin_memory().to(gpu_id, non_blocking=True)
               data['att_idx'] = batch_data[dd][ff]['att_idx'].pin_memory().to(gpu_id, non_blocking=True)
               data['subgraph_idx'] = batch_data[dd][ff]['subgraph_idx'].pin_memory().to(gpu_id, non_blocking=True)
-              data['node_pos'] = batch_data[dd][ff]['positional2'].pin_memory().to(gpu_id, non_blocking=True)
-              data['pos_true'] = batch_data[dd][ff]['positional1'].pin_memory().to(gpu_id, non_blocking=True)
+              data['node_attributes_array'] = dict([])
+              data['node_attributes_truth'] = dict([])
+              data['edge_attributes_adj'] = dict([])
+              data['edge_attributes_truth'] = dict([])
+              for attribute in self.config.attributes:
+                if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+                  data['node_attributes_array'][attribute] = batch_data[dd][ff][''.join([attribute,'_array'])].pin_memory().to(gpu_id, non_blocking=True)
+                  data['node_attributes_truth'][attribute] = batch_data[dd][ff][''.join([attribute,'_truth'])].pin_memory().to(gpu_id, non_blocking=True)
+                  #data[attributte] += batch_data[dd][ff][''.join([attribute,'_predict'])].pin_memory().to(gpu_id, non_blocking=True)
+                  #data[''.join([attribute,'_truth'])] = batch_data[dd][ff][''.join([attribute,'_truth'])].pin_memory().to(gpu_id, non_blocking=True)
+                else:
+                  data['edge_attributes_adj'][attribute] = batch_data[dd][ff][''.join([attribute,'_adj'])].pin_memory().to(gpu_id, non_blocking=True)
+                  data['edge_attributes_truth'][attribute] = batch_data[dd][ff][''.join([attribute,'_truth'])].pin_memory().to(gpu_id, non_blocking=True)
+              #data['node_pos'] = batch_data[dd][ff]['positional2'].pin_memory().to(gpu_id, non_blocking=True)
+              #data['pos_true'] = batch_data[dd][ff]['positional1'].pin_memory().to(gpu_id, non_blocking=True)
               batch_fwd.append((data,))
 
           if batch_fwd:
-            train_loss, adj_loss, pos_loss = model(*batch_fwd)            
+            train_loss, adj_loss, losses = model(*batch_fwd)            
             avg_train_loss += train_loss 
             avg_adj_loss += adj_loss
-            avg_pos_loss += pos_loss 
-                 
+            for attribute in self.config.attributes:
+              exec('avg_' + attribute + '_loss += losses[attribute]')
+            #avg_pos_loss += pos_loss 
+        
+            # assign gradient
+            # //johan Use 16-bit precision again                    
             train_loss.backward()
         
         # clip_grad_norm_(model.parameters(), 5.0e-0)
         optimizer.step()
         avg_train_loss /= float(self.dataset_conf.num_fwd_pass)
         avg_adj_loss /= float(self.dataset_conf.num_fwd_pass)
-        avg_pos_loss /= float(self.dataset_conf.num_fwd_pass)
+        for attribute in self.config.attributes:
+              exec('avg_' + attribute + '_loss /= float(self.dataset_conf.num_fwd_pass)')
         # reduce
         train_loss = float(avg_train_loss.data.cpu().numpy())
         adj_loss = float(avg_adj_loss.data.cpu().numpy())
-        pos_loss = float(avg_pos_loss.data.cpu().numpy())
+        for attribute in self.config.attributes:
+              exec('' + attribute + '_loss = float(avg_adj_loss.data.cpu().numpy())')
         
         self.writer.add_scalar('train_loss', train_loss, iter_count)
         self.writer.add_scalar('adj_loss', adj_loss, iter_count) 
-        self.writer.add_scalar('pos_loss', pos_loss, iter_count) 
-        
-        self.writer.add_scalar('train_loss', train_loss, iter_count)
+        for attribute in self.config.attributes:
+              exec("self.writer.add_scalar('" + attribute + "_loss', " + attribute + "_loss, iter_count)")
+         
         results['train_loss'] += [train_loss]
         results['train_step'] += [iter_count]
 
@@ -333,6 +352,7 @@ class GranRunner(object):
       ### Generate Graphs
       A_pred = []
       node_pred = []
+      edge_pred = []
       num_nodes_pred = []
       num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
 
@@ -344,15 +364,17 @@ class GranRunner(object):
           input_dict['is_sampling']=True
           input_dict['batch_size']=self.test_conf.batch_size
           input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
-          A_tmp, node_pos = model(input_dict)
+          A_tmp, node_temp, edge_temp = model(input_dict)
           gen_run_time += [time.time() - start_time]
           A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
           num_nodes_pred += [aa.shape[0] for aa in A_tmp]
-          node_pred += [aa.data.cpu().numpy() for aa in node_pos]
+          node_pred += [aa.data.cpu().numpy() for aa in node_temp]
+          edge_pred += [aa.data.cpu().numpy() for aa in edge_temp]
 
       logger.info('Average test time per mini-batch = {}'.format(
           np.mean(gen_run_time)))
-          
+
+
       graphs_gen = [get_graph(aa, node_pred[i]) for i, aa in enumerate(A_pred)]
 
     ### Visualize Generated Graphs

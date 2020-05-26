@@ -57,19 +57,61 @@ class GRANData(object):
   def _get_graph_data(self, G):
     node_degree_list = [(n, d) for n, d in G.degree()]
 
+    # //johan Create attribute dictionaries
+    d = {} 
+    for adj in range(6):
+        d[adj] = {}
+        for attribute in self.config.attributes:
+          d[adj][attribute] = []
+
+    
+    # //Johan Create dictionary form of graph data
+    node_attributes = dict(G.nodes(data=True))
+    edge_attributes = dict([((x,y),z) for (x,y,z) in  G.edges(data=True)])
+    num_nodes = len(node_attributes)
+    num_edges = len(edge_attributes)
+
+
     adj_0 = np.array(nx.to_numpy_matrix(G))
 
+
+    for attribute in d[0]:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        for j in node_attributes:
+          d[0][attribute] += [node_attributes[j][attribute]]
+      else:
+          for j in edge_attributes:
+            d[0][attribute] = np.array(nx.to_numpy_matrix(G,weight=attribute))
     ### Degree descent ranking
     # N.B.: largest-degree node may not be unique
     degree_sequence = sorted(
         node_degree_list, key=lambda tt: tt[1], reverse=True)
+
+    nodelist=[dd[0] for dd in degree_sequence]
     adj_1 = np.array(
-        nx.to_numpy_matrix(G, nodelist=[dd[0] for dd in degree_sequence]))
+        nx.to_numpy_matrix(G, nodelist=nodelist))
+
+    for attribute in d[1]:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        for j in nodelist:
+          d[1][attribute] += [node_attributes[j][attribute]]
+      else:
+          for j in edge_attributes:
+            d[1][attribute] = np.array(nx.to_numpy_matrix(G,weight=attribute,nodelist=nodelist))
 
     ### Degree ascent ranking
     degree_sequence = sorted(node_degree_list, key=lambda tt: tt[1])
+    nodelist=[dd[0] for dd in degree_sequence]
     adj_2 = np.array(
-        nx.to_numpy_matrix(G, nodelist=[dd[0] for dd in degree_sequence]))
+        nx.to_numpy_matrix(G, nodelist=nodelist))
+      
+    for attribute in d[2]:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        for j in nodelist:
+          d[2][attribute] += [node_attributes[j][attribute]]
+      else:
+          for j in edge_attributes:
+            d[2][attribute] = np.array(nx.to_numpy_matrix(G,weight=attribute,nodelist=nodelist))
 
     ### BFS & DFS from largest-degree node
     CGs = [G.subgraph(c) for c in nx.connected_components(G)]
@@ -79,14 +121,6 @@ class GRANData(object):
 
     node_list_bfs = []
     node_list_dfs = []
-
-    # //Oliver lists for x and y coordinates with BFS/DFS
-
-    node_x_list_bfs = []
-    node_y_list_bfs = []
-
-    node_x_list_dfs = []
-    node_y_list_dfs = []
 
     for ii in range(len(CGs)):
       node_degree_list = [(n, d) for n, d in CGs[ii].degree()]
@@ -99,15 +133,22 @@ class GRANData(object):
       node_list_bfs += list(bfs_tree.nodes())
       node_list_dfs += list(dfs_tree.nodes())
 
-    # Appends x and y data ind the order of the BFS/DFS
+    for attribute in d[3]:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        for j in node_list_bfs:
+          d[3][attribute] += [node_attributes[j][attribute]]
+      else:
+          for j in edge_attributes:
+            d[3][attribute] = np.array(nx.to_numpy_matrix(G,weight=attribute,nodelist=node_list_bfs))
 
-    for i in range(len(node_list_bfs)):
-      node_x_list_bfs.append(G.nodes(data=True)[node_list_bfs[i]]["x"])
-      node_y_list_bfs.append(G.nodes(data=True)[node_list_bfs[i]]["y"])
+    for attribute in d[4]:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        for j in node_list_dfs:
+          d[4][attribute] += [node_attributes[j][attribute]]
+      else:
+          for j in edge_attributes:
+            d[4][attribute] = np.array(nx.to_numpy_matrix(G,weight=attribute,nodelist=node_list_dfs))
 
-    for i in range(len(node_list_dfs)):
-      node_x_list_dfs.append(G.nodes(data=True)[node_list_dfs[i]]["x"])
-      node_y_list_dfs.append(G.nodes(data=True)[node_list_dfs[i]]["y"])
 
     adj_3 = np.array(nx.to_numpy_matrix(G, nodelist=node_list_bfs))
     adj_4 = np.array(nx.to_numpy_matrix(G, nodelist=node_list_dfs))
@@ -127,45 +168,60 @@ class GRANData(object):
           key=lambda tt: tt[1],
           reverse=True)
       node_list += [nn for nn, dd in sort_node_tuple]
+    
+    for attribute in d[5]:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        for j in node_list:
+          d[5][attribute] += [node_attributes[j][attribute]]
+      else:
+          for j in edge_attributes:
+            d[5][attribute] = np.array(nx.to_numpy_matrix(G,weight=attribute,nodelist=node_list))
 
     adj_5 = np.array(nx.to_numpy_matrix(G, nodelist=node_list))
+
+
 
     if self.num_canonical_order == 5:
       adj_list = [adj_0, adj_1, adj_3, adj_4, adj_5]
     else:
       if self.node_order == 'degree_decent':
         adj_list = [adj_1]
+        attribute_dic = [d[1]]
       elif self.node_order == 'degree_accent':
         adj_list = [adj_2]
+        attribute_dic = [d[2]]
       elif self.node_order == 'BFS':
         adj_list = [adj_3]
-        x_pos = np.array(node_x_list_bfs)
-        y_pos = np.array(node_y_list_bfs)
+        attribute_dic = [d[3]]
       elif self.node_order == 'DFS':
         adj_list = [adj_4]
-        x_pos = np.array(node_x_list_dfs)
-        y_pos = np.array(node_y_list_dfs)
+        attribute_dic = [d[4]]
       elif self.node_order == 'k_core':
         adj_list = [adj_5]
+        attribute_dic = [d[5]]
       elif self.node_order == 'DFS+BFS':
         adj_list = [adj_4, adj_3]
+        attribute_dic = [d[4],d[3]]
       elif self.node_order == 'DFS+BFS+k_core':
         adj_list = [adj_4, adj_3, adj_5]
+        attribute_dic = [d[4],d[3],d[5]]
       elif self.node_order == 'DFS+BFS+k_core+degree_decent':
         adj_list = [adj_4, adj_3, adj_5, adj_1]
+        attribute_dic = [d[4],d[3],d[5],d[1]]
       elif self.node_order == 'all':
         adj_list = [adj_4, adj_3, adj_5, adj_1, adj_0]
+        attribute_dic = [d[4],d[3],d[5],d[1],d[0]]
       else:
         adj_list = [adj_0]
+        attribute_dic = [d[0]]
 
     # print('number of nodes = {}'.format(adj_0.shape[0]))
 
-    # Returns a dict with the adj list and positions 
+    # Returns a dict with the adj list and attribute dic
 
     graph = {
       "adj_list": adj_list, 
-      "x_pos": x_pos,
-      "y_pos": y_pos
+      "attribute_dic": attribute_dic
     }
 
     return graph
@@ -180,8 +236,7 @@ class GRANData(object):
     graph = pickle.load(open(self.file_names[index], 'rb'))
 
     adj_list = graph["adj_list"]
-    x_pos = graph["x_pos"]
-    y_pos = graph["y_pos"]
+    attribute_dic = graph["attribute_dic"]
 
     num_nodes = adj_list[0].shape[0]
     num_subgraphs = int(np.floor((num_nodes - K) / S) + 1)
@@ -219,8 +274,11 @@ class GRANData(object):
       subgraph_size = []
       subgraph_idx = []
       att_idx = []
-      positional1 = []
-      positional2 = []
+      attributes_predict = dict()
+      attributes_truth = dict()
+      for attribute in self.config.attributes:
+          attributes_predict[attribute] = []
+          attributes_truth[attribute] = []
       subgraph_count = 0
 
       for ii in range(len(adj_list)):
@@ -288,16 +346,14 @@ class GRANData(object):
               adj_full[idx_row_gnn, idx_col_gnn].flatten().astype(np.bool)
           ]
 
-                    # //Johan Add positional predict values, might add generalized solution later
-          # //Johan Positional1 contains values to base prediction on, positional2 contains ground truth
-          # //Johan Consider what is the most optimal value to represent new nodes, 0 and 1 are actual values it could have for example
-          positional1 +=  [
-            np.concatenate([np.stack(( x_pos[:jj], y_pos[:jj])),
-                                np.zeros((2, K))], axis=1).astype(np.float64)
-          ]
-
-          positional2 += [ np.stack(( x_pos[:jj+K] , y_pos[:jj+K] )).astype(np.float64)]
-
+          for attribute in attributes_truth:
+            if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+              attributes_truth[attribute] += [
+                np.array(attribute_dic[ii][attribute][:jj+K]).astype(np.float64)
+              ]
+            else:
+              adj_block = attribute_dic[ii][attribute][idx_row_gnn, idx_col_gnn].flatten()
+              attributes_truth[attribute] += [torch.from_numpy(adj_block).long()]
 
           subgraph_size += [jj + K]
           subgraph_idx += [
@@ -319,13 +375,18 @@ class GRANData(object):
       data['node_idx_feat'] = np.concatenate(node_idx_feat)
       data['label'] = np.concatenate(label)
       data['att_idx'] = np.concatenate(att_idx)
-      data['positional1'] = np.concatenate(positional2, axis=1)
-      data['positional2'] = np.stack(( x_pos[:] , y_pos[:]))
       data['subgraph_idx'] = np.concatenate(subgraph_idx)
       data['subgraph_count'] = subgraph_count
       data['num_nodes'] = num_nodes
       data['subgraph_size'] = subgraph_size
       data['num_count'] = sum(subgraph_size)
+      for attribute in attribute_dic[0]:
+        if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+          data[''.join([attribute,'_array'])] = np.stack([attribute_dic[i][attribute] for i in range(len(attribute_dic))] , axis=0)
+          data[''.join([attribute,'_truth'])] = np.concatenate(attributes_truth[attribute])
+        else:
+          data[''.join([attribute,'_adj'])] = np.tril(np.stack([attribute_dic[i][attribute] for i in range(len(attribute_dic))] , axis=0), k=-1)
+          data[''.join([attribute,'_truth'])] = np.concatenate(attributes_truth[attribute])
       data_batch += [data]
 
     end_time = time.time()
@@ -342,6 +403,7 @@ class GRANData(object):
     batch_size = len(batch)
     N = self.max_num_nodes
     C = self.num_canonical_order
+
     batch_data = []
 
     for ff in range(self.num_fwd_pass):
@@ -367,6 +429,32 @@ class GRANData(object):
                       constant_values=0.0) for ii, bb in enumerate(batch_pass)
               ],
               axis=0)).float()  # B X C X N X N
+      
+      for attribute in self.config.attributes:
+        if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+          data[''.join([attribute,'_truth'])] = torch.from_numpy(
+          np.concatenate([bb[''.join([attribute,'_truth'])] for bb in batch_pass], axis=0)).float()
+          data[''.join([attribute,'_array'])] = torch.from_numpy(
+          np.stack(
+              [
+                  np.pad(
+                      bb[''.join([attribute,'_array'])], ((0,0), (0, pad_size[ii])),
+                      'constant',
+                      constant_values=0.0) for ii, bb in enumerate(batch_pass)
+              ])).flatten().float()
+        else:
+          data[''.join([attribute,'_truth'])]  = torch.from_numpy(
+          np.concatenate([bb[''.join([attribute,'_truth'])] for bb in batch_pass], axis=0)).float()
+          data[''.join([attribute,'_adj'])] = torch.from_numpy(
+          np.stack(
+              [
+                  np.pad(
+                      bb[''.join([attribute,'_adj'])], ((0, 0), (0, pad_size[ii]), (0, pad_size[ii])),
+                      'constant',
+                      constant_values=0.0) for ii, bb in enumerate(batch_pass)
+              ],
+              axis=0)).float() # B X C X N X N
+      
 
       idx_base = np.array([0] + [bb['num_count'] for bb in batch_pass])
       idx_base = np.cumsum(idx_base)
@@ -385,19 +473,6 @@ class GRANData(object):
 
       data['att_idx'] = torch.from_numpy(
           np.concatenate([bb['att_idx'] for bb in batch_pass], axis=0)).long()
-
-      data['positional1'] = torch.from_numpy(
-          np.concatenate([bb['positional1'] for bb in batch_pass], axis=1)).float()
-
-      data['positional2'] = torch.from_numpy(
-          np.concatenate(
-              [
-                  np.pad(
-                      bb['positional2'], ((0, 0), (0, pad_size[ii])),
-                      'constant',
-                      constant_values=0.0) for ii, bb in enumerate(batch_pass)
-              ],
-              axis=1)).float()    
 
       # shift one position for padding 0-th row feature in the model
       node_idx_feat = np.concatenate(

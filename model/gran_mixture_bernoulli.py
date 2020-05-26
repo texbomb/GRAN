@@ -16,6 +16,8 @@ class GNN(nn.Module):
                msg_dim,
                node_state_dim,
                edge_feat_dim,
+               node_attributes_dim,
+               edge_attributes_dim,
                num_prop=1,
                num_layer=1,
                has_attention=True,
@@ -36,6 +38,8 @@ class GNN(nn.Module):
     self.has_graph_output = has_graph_output
     self.output_hidden_dim = output_hidden_dim
     self.graph_output_dim = graph_output_dim
+    self.node_attribute_dim = node_attributes_dim
+    self.edge_attribute_dim = edge_attributes_dim
 
     self.update_func = nn.ModuleList([
         nn.GRUCell(input_size=self.msg_dim, hidden_size=self.node_state_dim)
@@ -45,7 +49,7 @@ class GNN(nn.Module):
     self.msg_func = nn.ModuleList([
         nn.Sequential(
             *[
-                nn.Linear(self.node_state_dim + self.edge_feat_dim + 2, 
+                nn.Linear( (self.edge_attribute_dim + 1) * self.node_state_dim + self.edge_feat_dim + self.node_attribute_dim, 
                           self.msg_dim),                
                 nn.ReLU(),
                 nn.Linear(self.msg_dim, self.msg_dim)
@@ -56,7 +60,7 @@ class GNN(nn.Module):
       self.att_head = nn.ModuleList([
           nn.Sequential(
               *[
-                  nn.Linear(self.node_state_dim + self.edge_feat_dim + 2,
+                  nn.Linear((self.edge_attribute_dim + 1) * self.node_state_dim + self.edge_feat_dim + self.node_attribute_dim,
                             self.att_hidden_dim),
                   nn.ReLU(),
                   nn.Linear(self.att_hidden_dim, self.msg_dim),
@@ -75,7 +79,7 @@ class GNN(nn.Module):
       self.graph_output_head = nn.Sequential(
           *[nn.Linear(self.node_state_dim, self.graph_output_dim)])
 
-  def _prop(self, state, edge, edge_feat, node_pos, layer_idx=0):
+  def _prop(self, state, edge, edge_feat, node_attributes, edge_attributes, layer_idx=0):
     ### compute message
     state_diff = state[edge[:, 0], :] - state[edge[:, 1], :]
     if self.edge_feat_dim > 0:
@@ -83,10 +87,14 @@ class GNN(nn.Module):
     else:
       edge_input = state_diff
 
+    for i in range(len(edge_attributes)):
+      attribute_diff = edge_attributes[i,edge[:, 0], :] - edge_attributes[i,edge[:, 1], :]
+      edge_input = torch.cat([edge_input, attribute_diff], dim=1)
+      
+    for i in range(len(node_attributes)):
+      attribute_diff = node_attributes[i,edge[:, 0]] - node_attributes[i,edge[:, 1]]
+      edge_input = torch.cat([edge_input, attribute_diff.reshape(-1,1)], dim=1)
     # //Johan Think about adding postional data as optional config
-    node_pos_diff = (node_pos[: ,edge[:, 0]] - node_pos[:, edge[:, 1]]).float()
-
-    edge_input = torch.cat([edge_input, torch.t(node_pos_diff)], dim=1)
 
     msg = self.msg_func[layer_idx](edge_input)    
 
@@ -104,7 +112,7 @@ class GNN(nn.Module):
     state = self.update_func[layer_idx](state_msg, state)
     return state
 
-  def forward(self, node_feat, edge, edge_feat, node_pos, graph_idx=None):
+  def forward(self, node_feat, edge, edge_feat, node_attributes, edge_attributes, graph_idx=None):
     """
       N.B.: merge a batch of graphs as a single graph
 
@@ -121,7 +129,7 @@ class GNN(nn.Module):
         state = F.relu(state)
 
       for jj in range(self.num_prop):
-        state = self._prop(state, edge, edge_feat=edge_feat, node_pos=node_pos, layer_idx=ii)
+        state = self._prop(state, edge, edge_feat=edge_feat, node_attributes=node_attributes, edge_attributes=edge_attributes, layer_idx=ii)
 
     if self.has_residual:
       state = state + prev_state
@@ -173,28 +181,51 @@ class GRANMixtureBernoulli(nn.Module):
     self.num_mix_component = config.model.num_mix_component
     self.has_rand_feat = True # use random feature instead of 1-of-K encoding
     self.att_edge_dim = 64
+    self.node_attributes_dim = sum([self.config.attributes[i]['node_feature'] for i in self.config.attributes])
+    self.edge_attributes_dim = len(self.config.attributes) -self.node_attributes_dim 
+    self.embedding_dim = config.model.embedding_dim
 
     self.output_theta = nn.Sequential(
-        nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.Linear(self.embedding_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.output_dim * self.num_mix_component))
     
-    self.output_pos = nn.Sequential(
-        nn.Linear(self.hidden_dim, self.hidden_dim),
-        nn.BatchNorm1d(self.hidden_dim),
-        nn.ReLU(inplace=True),
-        nn.Linear(self.hidden_dim, self.hidden_dim),
-        nn.BatchNorm1d(self.hidden_dim),
-        nn.ReLU(inplace=True),
-        nn.Linear(self.hidden_dim, self.hidden_dim),
-        nn.BatchNorm1d(self.hidden_dim),
-        nn.ReLU(inplace=True),
-        nn.Linear(self.hidden_dim, 2))
+    self.output_node_attributes = nn.ModuleList([
+      nn.Sequential(
+        *[
+          nn.Linear(self.embedding_dim, self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.hidden_dim, self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.hidden_dim, self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.hidden_dim, 1)
+        ]) for _ in range(self.node_attributes_dim)
+    ])
+
+    self.output_edge_attributes = nn.ModuleList([
+      nn.Sequential(
+        *[
+          nn.Linear(self.embedding_dim, self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.hidden_dim, self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.hidden_dim, self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
+          nn.ReLU(inplace=True),
+          nn.Linear(self.hidden_dim, 1)
+        ]) for _ in range(self.edge_attributes_dim)
+    ])
 
     self.output_alpha = nn.Sequential(
-        nn.Linear(self.hidden_dim, self.hidden_dim),
+        nn.Linear(self.embedding_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
         nn.Linear(self.hidden_dim, self.hidden_dim),
         nn.ReLU(inplace=True),
@@ -212,8 +243,10 @@ class GRANMixtureBernoulli(nn.Module):
 
     self.decoder = GNN(
         msg_dim=self.hidden_dim,
-        node_state_dim=self.hidden_dim,
+        node_state_dim=self.embedding_dim,
         edge_feat_dim=2 * self.att_edge_dim,
+        node_attributes_dim= self.node_attributes_dim,
+        edge_attributes_dim= self.edge_attributes_dim,
         num_prop=self.num_GNN_prop,
         num_layer=self.num_GNN_layers,
         has_attention=self.has_attention)
@@ -223,36 +256,47 @@ class GRANMixtureBernoulli(nn.Module):
     self.adj_loss_func = nn.BCEWithLogitsLoss(
         pos_weight=pos_weight, reduction='none')
         
-    self.pos_loss_func = nn.MSELoss()
-
+    self.node_attribute_loss_func = nn.MSELoss()
+    self.edge_attribute_loss_func = nn.MSELoss()
   def _inference(self,
                  A_pad=None,
                  edges=None,
                  node_idx_gnn=None,
                  node_idx_feat=None,
                  att_idx=None,
-                 node_pos=None):
+                 node_attributes=None,
+                 edge_attributes=None):
     """ generate adj in row-wise auto-regressive fashion """
 
     B, C, N_max, _ = A_pad.shape
     H = self.hidden_dim
     K = self.block_size
     A_pad = A_pad.view(B * C * N_max, -1)
+    for attribute in edge_attributes:
+      edge_attributes[attribute] =  edge_attributes[attribute].view(B * C * N_max, -1)  
 
     if self.dimension_reduce:
       node_feat = self.decoder_input(A_pad)  # BCN_max X H
-      # //Johan Think about adding optional positional values
-      node_pos = node_pos
+      # //Johan decoding edge attributes, no need for node attributes, as they are only 1-dimensional
+      for attribute in edge_attributes:
+        edge_attributes[attribute] = self.decoder_input(edge_attributes[attribute]) 
+
+
     else:
       node_feat = A_pad  # BCN_max X N_max
-      nod_pos = node_pos
+
 
     ### GNN inference
     # pad zero as node feature for newly generated nodes (1st row)
     node_feat = F.pad(
         node_feat, (0, 0, 1, 0), 'constant', value=0.0)  # (BCN_max + 1) X N_max
-    node_pos = F.pad(
-        node_pos, (1, 0, 0, 0), 'constant', value=0.0)
+    for attribute in node_attributes:
+       node_attributes[attribute] = F.pad(
+            node_attributes[attribute], (1, 0), 'constant', value=0.0)
+    for attribute in edge_attributes:
+        edge_attributes[attribute] = F.pad(
+            edge_attributes[attribute], (0, 0, 1, 0), 'constant', value=0.0)  # (BCN_max + 1) X N_max
+
 
     # create symmetry-breaking edge feature for the newly generated nodes
     att_idx = att_idx.view(-1, 1)
@@ -276,26 +320,40 @@ class GRANMixtureBernoulli(nn.Module):
       att_edge_feat = att_edge_feat.scatter(
           1, att_idx[[edges[:, 1]]] + self.att_edge_dim, 1)
 
+    # //johan Prepare attributes selection
+    for attribute in node_attributes:
+       node_attributes[attribute] = node_attributes[attribute][node_idx_feat]
+    for attribute in edge_attributes:
+        edge_attributes[attribute] = edge_attributes[attribute][node_idx_feat]
+    node_attributes = torch.stack([node_attributes[i] for i in node_attributes]) # B, Ordering, value
+    edge_attributes = torch.stack([edge_attributes[i] for i in edge_attributes]) # B, Ordering, node, value
+
     # GNN inference
     # N.B.: node_feat is shared by multiple subgraphs within the same batch
-    # Modified to take the node position into account
     node_state = self.decoder(
-        node_feat[node_idx_feat], edges, edge_feat=att_edge_feat, node_pos=node_pos[:,node_idx_feat])
+        node_feat[node_idx_feat], edges, edge_feat=att_edge_feat, node_attributes=node_attributes, edge_attributes=edge_attributes)
 
     ### Pairwise predict edges
     diff = node_state[node_idx_gnn[:, 0], :] - node_state[node_idx_gnn[:, 1], :]
+    
     
     log_theta = self.output_theta(diff)  # B X (tt+K)K
     log_alpha = self.output_alpha(diff)  # B X (tt+K)K
     log_theta = log_theta.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
     log_alpha = log_alpha.view(-1, self.num_mix_component)  # B X CN(N-1)/2 X K
 
-    # Predics positions from the diff state
-    pos = self.output_pos(node_state[node_idx_feat==0])
+    node_attributes_pred = []
+    edge_attributes_pred = []
+    # Predict node attributes
+    for attribute_layer in range(len(node_attributes)):
+      node_attributes_pred.append( self.output_node_attributes[attribute_layer](node_state[node_idx_feat==0]) )
+    # Predict edge attributes
+    for attribute_layer in range(len(edge_attributes)):
+      edge_attributes_pred.append( self.output_edge_attributes[attribute_layer](diff) ) #Predict på edges !!"!" KIG her
     #print(pos)
 
 
-    return log_theta, log_alpha, pos
+    return log_theta, log_alpha, node_attributes_pred, edge_attributes_pred
 
 
   def _sampling(self, B):
@@ -311,12 +369,25 @@ class GRANMixtureBernoulli(nn.Module):
     else:
       N_pad = N
 
-    A = torch.zeros(B, N_pad, N_pad).to(self.device)
-    dim_input = self.embedding_dim if self.dimension_reduce else self.max_num_nodes
+    node_attributes_dim = 0
+    edge_attributes_dim = 0
+    for attribute in self.config.attributes:
+      if eval(''.join(['self.config.attributes.', attribute, '.node_feature'])):
+        node_attributes_dim += 1
+      else:
+        edge_attributes_dim += 1
 
+    A = torch.zeros(B, N_pad, N_pad).to(self.device)
+    edge_A = torch.zeros(B, edge_attributes_dim, N_pad, N_pad).to(self.device)
+    node_A = torch.zeros(B, node_attributes_dim, N_pad).to(self.device)
+
+    dim_input = self.embedding_dim if self.dimension_reduce else self.max_num_nodes
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
-    node_pos = torch.zeros((B, 2, N_pad)).to(self.device)
+    edge_state = torch.zeros(B, edge_attributes_dim, N_pad, dim_input).to(self.device)
+    node_attribute_state = torch.zeros(B, node_attributes_dim, N_pad).to(self.device)
+
+
 
     for ii in range(0, N_pad, S):
       # for ii in range(0, 3530, S):
@@ -327,21 +398,35 @@ class GRANMixtureBernoulli(nn.Module):
       # reset to discard overlap generation
       A[:, ii:, :] = .0
       A = torch.tril(A, diagonal=-1)
+      
+      edge_A[:,:, ii:, :] = .0
+      edge_A = torch.tril(edge_A, diagonal=-1)
 
       if ii >= K:
         if self.dimension_reduce:
           node_state[:, ii - K:ii, :] = self.decoder_input(A[:, ii - K:ii, :N])
+          edge_state[:,:, ii - K:ii, :] = self.decoder_input(edge_A[:,:, ii - K:ii, :N])
 
         else:
           node_state[:, ii - K:ii, :] = A[:, ii - S:ii, :N]
+          edge_state[:,:, ii - K:ii, :] = edge_A[:,:, ii - S:ii, :N]
+        node_attribute_state[:,:, ii - K:ii] = node_A[:,:, ii - S:ii]
       else:
         if self.dimension_reduce:
           node_state[:, :ii, :] = self.decoder_input(A[:, :ii, :N])
+          edge_state[:,:, :ii, :] = self.decoder_input(edge_A[:,:, :ii, :N])
         else:
           node_state[:, :ii, :] = A[:, ii - S:ii, :N]
+          edge_state[:,:, :ii, :] = edge_A[:,:, ii - S:ii, :N]
+        node_attribute_state[:,:,:ii] = node_A[:,:,:ii]
+        
 
       node_state_in = F.pad(
           node_state[:, :ii, :], (0, 0, 0, K), 'constant', value=.0)
+      edge_state_in = F.pad(
+          edge_state[:,:, :ii, :], (0, 0, 0, K), 'constant', value=.0)
+      node_attribute_state_in = F.pad(
+          node_attribute_state[:,:, :ii], ( 0, K), 'constant', value=.0)
 
       ### GNN propagation
       adj = F.pad(
@@ -353,16 +438,6 @@ class GRANMixtureBernoulli(nn.Module):
           for bb in range(B)
       ]
       edges = torch.cat(edges, dim=1).t()
-      # //johan Test when ii == 0, whether node_pos[bb,:, :ii] or node_pos[bb,:, :jj works best
-      if ii == 0:
-        tmp_node_pos = [node_pos[bb, :, :ii] for bb in range(B)]
-      else:
-        tmp_node_pos = [node_pos[bb, :, :jj] for bb in range(B)]
-
-        # tmp_node_pos = [torch.cat((node_pos[bb,:, :ii], node_pos[bb,:,ii].reshape(1, -1)), dim=0) for bb in range(B)]
-      #tmp_node_pos = [node_pos[bb,:, :ii] for bb in range(B)]
-
-      tmp_node_pos = torch.cat(tmp_node_pos, dim=1)  
 
 
       att_idx = torch.cat([torch.zeros(ii).long(),
@@ -387,7 +462,10 @@ class GRANMixtureBernoulli(nn.Module):
             1, att_idx[[edges[:, 1]]] + self.att_edge_dim, 1)
 
       node_state_out = self.decoder(
-          node_state_in.view(-1, H), edges, edge_feat=att_edge_feat, node_pos = tmp_node_pos)
+          node_state_in.view(-1, H), edges,
+           edge_feat=att_edge_feat,
+           edge_attributes=edge_state_in.view(edge_attributes_dim,-1,H),
+           node_attributes=node_attribute_state_in.view(node_attributes_dim,-1))
       node_state_out = node_state_out.view(B, jj, -1)
 
       idx_row, idx_col = np.meshgrid(np.arange(ii, jj), np.arange(jj))
@@ -399,8 +477,13 @@ class GRANMixtureBernoulli(nn.Module):
       log_theta = self.output_theta(diff)
       log_alpha = self.output_alpha(diff)
 
-      pos = self.output_pos(node_state_out.view(-1, node_state.shape[2]))
-      node_pos[:,:,ii:jj] = pos.reshape(B, -1, 2)[:,ii:jj,:].view(B,2,-1)
+      for attribute_layer in range(edge_attributes_dim):
+        pred = self.output_edge_attributes[attribute_layer](diff)
+        edge_A[:,attribute_layer, ii:jj, :jj] = pred.reshape(B,self.edge_attributes_dim,-1)
+      
+      for attribute_layer in range(node_attributes_dim):
+        pred = self.output_node_attributes[attribute_layer](node_state_out)
+        node_A[:,attribute_layer,ii:jj] = pred.reshape(B,-1)[:,ii:jj]
 
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
@@ -421,7 +504,13 @@ class GRANMixtureBernoulli(nn.Module):
       A = torch.tril(A, diagonal=-1)
       A = A + A.transpose(1, 2)
 
-    return A, node_pos
+      edge_A = torch.tril(edge_A, diagonal=-1)
+      edge_A = edge_A + edge_A.transpose(2, 3)
+
+    #print(node_pos)
+    #print(A)
+
+    return A, node_A, edge_A
 
   def forward(self, input_dict):
     """
@@ -472,8 +561,11 @@ class GRANMixtureBernoulli(nn.Module):
     label = input_dict['label'] if 'label' in input_dict else None
     num_nodes_pmf = input_dict[
         'num_nodes_pmf'] if 'num_nodes_pmf' in input_dict else None
-    node_pos = input_dict["node_pos"] if 'node_pos' in input_dict else None
-    pos_true = input_dict["pos_true"] if 'pos_true' in input_dict else None
+    node_attributes_array = input_dict['node_attributes_array'] if 'node_attributes_array' in input_dict else None
+    node_attributes_truth = input_dict['node_attributes_truth'] if 'node_attributes_truth' in input_dict else None
+    edge_attributes_adj = input_dict['edge_attributes_adj'] if 'edge_attributes_adj' in input_dict else None
+    edge_attributes_truth = input_dict['edge_attributes_truth'] if 'edge_attributes_truth' in input_dict else None
+
     
     N_max = self.max_num_nodes
 
@@ -481,13 +573,14 @@ class GRANMixtureBernoulli(nn.Module):
       B, _, N, _ = A_pad.shape
 
       ### compute adj loss
-      log_theta, log_alpha, pos_pred = self._inference(
+      log_theta, log_alpha, node_attributes_pred, edge_attributes_pred = self._inference(
           A_pad=A_pad,
           edges=edges,
           node_idx_gnn=node_idx_gnn,
           node_idx_feat=node_idx_feat,
           att_idx=att_idx,
-          node_pos=node_pos)
+          node_attributes=node_attributes_array,
+          edge_attributes=edge_attributes_adj)
 
       num_edges = log_theta.shape[0]
 
@@ -495,14 +588,14 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      pos_loss = positional_loss(pos_true, pos_pred, self.pos_loss_func, node_idx_feat)
-
-      total_loss = total_loss_function(pos_loss, adj_loss) 
+      node_attribute_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, selection=node_idx_feat)
+      edge_attribute_loss = edge_classification(edge_attributes_pred, edge_attributes_truth, self.edge_attribute_loss_func)
+      total_loss = total_loss_function(adj_loss, node_attribute_loss, edge_attribute_loss) 
 
       return total_loss
       
     else:
-      A, node_pos = self._sampling(batch_size)
+      A, node_A, edge_A = self._sampling(batch_size)
 
       ### sample numbatber of nodes
       num_nodes_pmf = torch.from_numpy(num_nodes_pmf).to(self.device)
@@ -512,25 +605,29 @@ class GRANMixtureBernoulli(nn.Module):
       A_list = [
           A[ii, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
       ]
+      node_A_list = [
+          node_A[ii,:, :num_nodes[ii]] for ii in range(batch_size)
+      ]
+      edge_A_list = [
+          edge_A[ii,:, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
+      ]
       #print(A_list)
-      return A_list, node_pos
+      return A_list, node_A_list, edge_A_list
 
 # Total loss -> combined adj and positional loss. Need to be tuned with an alpha 
 
-def total_loss_function(pos_loss, adj_loss):
+def total_loss_function(adj_loss, *losses):
 
+  losses = list(losses)
+  [losses[0].update(losses[i]) for i in range(1, len(losses))]
   # print(f"pos_loss: {pos_loss * 0.15 }")
   # print(f"adj_loss: {adj_loss}")
 
+  total_loss =  adj_loss + 0.1 * sum(losses[0].values())
+  #print(adj_loss, pos_loss)
+  return total_loss, adj_loss, losses[0]
 
-  total_loss =   adj_loss + pos_loss
-  #print(adj_loss, pos_loss * 0.5)
-
-  return total_loss, adj_loss, pos_loss
-
-# Positional loss function - RMSE loss between predicted and true positions
-
-def positional_loss(pos_true, pos_pred, pos_loss_func, node_idx_feat):
+def edge_classification(pred, truth, pos_loss_func):
   """
     Args:
       pos_true: N X 2, Ground truth positional values
@@ -541,10 +638,28 @@ def positional_loss(pos_true, pos_pred, pos_loss_func, node_idx_feat):
     Returns:
       loss: mean squared error 
   """
-  pos_true = torch.t(pos_true).float()
-  
-  pos_loss = torch.sqrt(pos_loss_func(pos_true[node_idx_feat==0], pos_pred))
-  return pos_loss
+  pred = [pred[i].t() for i in range(len(pred))]
+  loss = dict()
+  for (x,y) in zip(range(len(pred)),truth):
+    loss[y] = torch.sqrt(pos_loss_func(pred[x],truth[y]))
+  return loss
+
+def one_dimensional_loss(pred, truth, pos_loss_func, selection):
+  """
+    Args:
+      pos_true: N X 2, Ground truth positional values
+      pos_pred: N X 2, Predicted positional values 
+      pos_loss_func: MSE loss
+      subgraph_idx: E X 1, see comments above
+
+    Returns:
+      loss: mean squared error 
+  """
+  pred = [pred[i].t() for i in range(len(pred))]
+  loss = dict()
+  for (x,y) in zip(range(len(pred)),truth):
+    loss[y] = pos_loss_func(pred[x],truth[y][selection==0])
+  return loss
 
   
 def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
