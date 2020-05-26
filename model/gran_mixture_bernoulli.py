@@ -50,7 +50,8 @@ class GNN(nn.Module):
         nn.Sequential(
             *[
                 nn.Linear( (self.edge_attribute_dim + 1) * self.node_state_dim + self.edge_feat_dim + self.node_attribute_dim, 
-                          self.msg_dim),                
+                          self.msg_dim),  
+                nn.BatchNorm1d(self.msg_dim),              
                 nn.ReLU(),
                 nn.Linear(self.msg_dim, self.msg_dim)
             ]) for _ in range(self.num_layer)
@@ -197,13 +198,13 @@ class GRANMixtureBernoulli(nn.Module):
       nn.Sequential(
         *[
           nn.Linear(self.embedding_dim, self.hidden_dim),
-          #nn.BatchNorm1d(self.hidden_dim),
+          nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.hidden_dim, self.hidden_dim),
-          #nn.BatchNorm1d(self.hidden_dim),
+          nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.hidden_dim, self.hidden_dim),
-          #nn.BatchNorm1d(self.hidden_dim),
+          nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.hidden_dim, 1)
         ]) for _ in range(self.node_attributes_dim)
