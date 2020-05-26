@@ -87,14 +87,15 @@ class GNN(nn.Module):
     else:
       edge_input = state_diff
 
-    for i in range(len(edge_attributes)):
-      attribute_diff = edge_attributes[i,edge[:, 0], :] - edge_attributes[i,edge[:, 1], :]
-      edge_input = torch.cat([edge_input, attribute_diff], dim=1)
-      
-    for i in range(len(node_attributes)):
-      attribute_diff = node_attributes[i,edge[:, 0]] - node_attributes[i,edge[:, 1]]
-      edge_input = torch.cat([edge_input, attribute_diff.reshape(-1,1)], dim=1)
-    # //Johan Think about adding postional data as optional config
+    if self.edge_attribute_dim > 0:
+      for i in range(len(edge_attributes)):
+        attribute_diff = edge_attributes[i,edge[:, 0], :] - edge_attributes[i,edge[:, 1], :]
+        edge_input = torch.cat([edge_input, attribute_diff], dim=1)
+
+    if self.node_attribute_dim > 0:  
+      for i in range(len(node_attributes)):
+        attribute_diff = node_attributes[i,edge[:, 0]] - node_attributes[i,edge[:, 1]]
+        edge_input = torch.cat([edge_input, attribute_diff.reshape(-1,1)], dim=1)
 
     msg = self.msg_func[layer_idx](edge_input)    
 
@@ -325,8 +326,10 @@ class GRANMixtureBernoulli(nn.Module):
        node_attributes[attribute] = node_attributes[attribute][node_idx_feat]
     for attribute in edge_attributes:
         edge_attributes[attribute] = edge_attributes[attribute][node_idx_feat]
-    node_attributes = torch.stack([node_attributes[i] for i in node_attributes]) # B, Ordering, value
-    edge_attributes = torch.stack([edge_attributes[i] for i in edge_attributes]) # B, Ordering, node, value
+    if node_attributes:
+      node_attributes = torch.stack([node_attributes[i] for i in node_attributes]) # B, Ordering, value
+    if edge_attributes:
+      edge_attributes = torch.stack([edge_attributes[i] for i in edge_attributes]) # B, Ordering, node, value
 
     # GNN inference
     # N.B.: node_feat is shared by multiple subgraphs within the same batch
