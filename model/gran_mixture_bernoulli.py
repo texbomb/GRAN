@@ -51,7 +51,7 @@ class GNN(nn.Module):
             *[
                 nn.Linear( (self.edge_attribute_dim + 1) * self.node_state_dim + self.edge_feat_dim + self.node_attribute_dim, 
                           self.msg_dim),  
-                nn.BatchNorm1d(self.msg_dim),              
+                nn.Dropout(p=0.2),              
                 nn.ReLU(),
                 nn.Linear(self.msg_dim, self.msg_dim)
             ]) for _ in range(self.num_layer)
@@ -198,13 +198,13 @@ class GRANMixtureBernoulli(nn.Module):
       nn.Sequential(
         *[
           nn.Linear(self.embedding_dim, self.hidden_dim),
-          nn.BatchNorm1d(self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.hidden_dim, self.hidden_dim),
-          nn.BatchNorm1d(self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.hidden_dim, self.hidden_dim),
-          nn.BatchNorm1d(self.hidden_dim),
+          #nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
           nn.Linear(self.hidden_dim, 1)
         ]) for _ in range(self.node_attributes_dim)
@@ -468,8 +468,8 @@ class GRANMixtureBernoulli(nn.Module):
       node_state_out = self.decoder(
           node_state_in.view(-1, H), edges,
            edge_feat=att_edge_feat,
-           edge_attributes=edge_state_in.view(edge_attributes_dim,-1,H),
-           node_attributes=node_attribute_state_in.view(node_attributes_dim,-1))
+           edge_attributes = edge_state_in.view(edge_attributes_dim,-1,H) if edge_attributes_dim else [],
+           node_attributes= node_attribute_state_in.view(node_attributes_dim,-1) if node_attributes_dim else [])
       node_state_out = node_state_out.view(B, jj, -1)
 
       idx_row, idx_col = np.meshgrid(np.arange(ii, jj), np.arange(jj))
