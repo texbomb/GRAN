@@ -49,10 +49,10 @@ class GNN(nn.Module):
     self.msg_func = nn.ModuleList([
         nn.Sequential(
             *[
-                # nn.Linear( self.node_state_dim + self.edge_feat_dim,
-                #           self.msg_dim),
-                nn.Linear((self.edge_attribute_dim + 1) * self.node_state_dim  + self.node_attribute_dim + self.edge_feat_dim,
-                self.msg_dim),    
+                nn.Linear( self.node_state_dim + self.edge_feat_dim,
+                          self.msg_dim),
+                # nn.Linear((self.edge_attribute_dim + 1) * self.node_state_dim  + self.node_attribute_dim + self.edge_feat_dim,
+                # self.msg_dim),    
                 nn.Dropout(p=0.2),              
                 nn.ReLU(),
                 nn.Linear(self.msg_dim, self.msg_dim)
@@ -63,10 +63,10 @@ class GNN(nn.Module):
       self.att_head = nn.ModuleList([
           nn.Sequential(
               *[
-                  # nn.Linear(self.node_state_dim + self.edge_feat_dim, 
-                  #           self.att_hidden_dim),
-                  nn.Linear((self.edge_attribute_dim + 1) * self.node_state_dim  + self.node_attribute_dim + self.edge_feat_dim,
-                  self.att_hidden_dim),   
+                  nn.Linear(self.node_state_dim + self.edge_feat_dim, 
+                            self.att_hidden_dim),
+                  # nn.Linear((self.edge_attribute_dim + 1) * self.node_state_dim  + self.node_attribute_dim + self.edge_feat_dim,
+                  # self.att_hidden_dim),   
                   nn.ReLU(),
                   nn.Linear(self.att_hidden_dim, self.msg_dim),
                   nn.Sigmoid()
@@ -95,15 +95,15 @@ class GNN(nn.Module):
     else:
       edge_input = state_diff
 
-    if self.edge_attribute_dim > 0:
-      for i in range(len(edge_attributes)):
-        attribute_diff = edge_attributes[i,edge[:, 0], :] - edge_attributes[i,edge[:, 1], :]
-        edge_input = torch.cat([edge_input, attribute_diff], dim=1)
+    # if self.edge_attribute_dim > 0:
+    #   for i in range(len(edge_attributes)):
+    #     attribute_diff = edge_attributes[i,edge[:, 0], :] - edge_attributes[i,edge[:, 1], :]
+    #     edge_input = torch.cat([edge_input, attribute_diff], dim=1)
 
-    if self.node_attribute_dim > 0:  
-      for i in range(len(node_attributes)):
-        attribute_diff = node_attributes[i,edge[:, 0]] - node_attributes[i,edge[:, 1]]
-        edge_input = torch.cat([edge_input, attribute_diff.reshape(-1,1)], dim=1)
+    # if self.node_attribute_dim > 0:  
+    #   for i in range(len(node_attributes)):
+    #     attribute_diff = node_attributes[i,edge[:, 0]] - node_attributes[i,edge[:, 1]]
+    #     edge_input = torch.cat([edge_input, attribute_diff.reshape(-1,1)], dim=1)
 
     msg = self.msg_func[layer_idx](edge_input)    
 
@@ -132,14 +132,14 @@ class GNN(nn.Module):
     """
     #Combine 
     state = node_feat
-    # if self.edge_attribute_dim > 0:
-    #   for i in range(len(edge_attributes)):
-    #     state = torch.cat([state,edge_attributes[i,:, :]],dim=1)
-    # if self.node_attribute_dim > 0:  
-    #   for i in range(len(node_attributes)):
-    #     state = torch.cat([state,node_attributes[i].reshape(-1,1).expand(-1,5)],dim=1)
+    if self.edge_attribute_dim > 0:
+      for i in range(len(edge_attributes)):
+        state = torch.cat([state,edge_attributes[i,:, :]],dim=1)
+    if self.node_attribute_dim > 0:  
+      for i in range(len(node_attributes)):
+        state = torch.cat([state,node_attributes[i].reshape(-1,1).expand(-1,5)],dim=1)
     
-    # state = self.reduce(state)
+    state = self.reduce(state)
     prev_state = state
     for ii in range(self.num_layer):
       if ii > 0:
@@ -376,7 +376,8 @@ class GRANMixtureBernoulli(nn.Module):
     edge_attributes_pred = []
     # Predict node attributes
     for attribute_layer in range(len(node_attributes)):
-      node_attributes_pred.append( self.output_node_attributes[attribute_layer](node_state).float())
+      node_attributes_pred.append( self.output_node_attributes[attribute_layer](diff) ) #diff to new node
+
     # Predict edge attributes
     for attribute_layer in range(len(edge_attributes)):
       edge_attributes_pred.append( self.output_edge_attributes[attribute_layer](diff) ) #Predict på edges !!"!" KIG her
@@ -507,13 +508,6 @@ class GRANMixtureBernoulli(nn.Module):
       log_theta = self.output_theta(diff)
       log_alpha = self.output_alpha(diff)
 
-      for attribute_layer in range(edge_attributes_dim):
-        pred = self.output_edge_attributes[attribute_layer](diff)
-        edge_A[:,attribute_layer, ii:jj, :jj] = pred.reshape(B,self.edge_attributes_dim,-1)
-      
-      for attribute_layer in range(node_attributes_dim):
-        pred = self.output_node_attributes[attribute_layer](node_state_out)
-        node_A[:,attribute_layer,ii:jj] = pred.reshape(B,-1)[:,ii:jj]
 
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
@@ -528,18 +522,44 @@ class GRANMixtureBernoulli(nn.Module):
 
       prob = torch.stack(prob, dim=0)
       edges = torch.bernoulli(prob[:, :jj - ii, :]).long()
-      for bb in range(B):
-        cross = []
-        indices = A[bb,:jj,:jj].to_sparse().coalesce().indices().long()
-        for edge in range(edges.shape[1]):
-          for node in edges[bb,edge].to_sparse().coalesce().indices()[0]:
-            for p1,p2 in zip(indices[0],indices[1]):
-              if not (edge == p1 or edge == p2):
-                lineseg1 = torch.tensor([[node_A[bb,0,ii],node_A[bb,1,ii]], [node_A[bb,0,node], node_A[bb,1,node]]])
-                lineseg2 = torch.tensor([[node_A[bb,0,p1], node_A[bb,1,p1]], [node_A[bb,0,p2], node_A[bb,1,p2]]])
-                if intersects(lineseg1, lineseg2):
-                  edges[bb,edge,node] = 0
-                  break
+
+      for attribute_layer in range(edge_attributes_dim):
+        pred = self.output_edge_attributes[attribute_layer](diff)
+        edge_A[:,attribute_layer, ii:jj, :jj] = pred.reshape(B,self.edge_attributes_dim,-1)
+      
+      for attribute_layer in range(node_attributes_dim):
+        pred = self.output_node_attributes[attribute_layer](diff).reshape(B,-1)
+        if ii == 0:
+          node_A[:,attribute_layer,ii:jj] = pred[:,ii:jj]
+        else:
+          pred = torch.stack([torch.mean(pred[bb][edges[bb,0]==1]) for bb in range(B)])
+          node_A[:,attribute_layer,ii:jj] = pred.reshape(B,-1)
+
+    # l = label[subgraph_idx==subgraph]
+    # if sum(l):
+    #   predx.append( torch.mean(pred[0][0,label==1][subgraph_idx[label==1]==subgraph]  ))
+    #   predy.append( torch.mean(pred[1][0,label==1][subgraph_idx[label==1]==subgraph] ))
+    # else:
+    #   predx.append( torch.mean(pred[0][0,subgraph_idx==subgraph])  )
+    #   predy.append( torch.mean(pred[1][0,subgraph_idx==subgraph])  )
+
+
+    
+      # for bb in range(B):
+      #   cross = []
+      #   indices = A[bb,:jj,:jj].to_sparse().coalesce().indices().long()
+      #   for edge in range(edges.shape[1]):
+      #     for node in edges[bb,edge].to_sparse().coalesce().indices()[0]:
+      #       for p1,p2 in zip(indices[0],indices[1]):
+      #         if not (edge == p1 or edge == p2):
+      #           lineseg1 = torch.tensor([[node_A[bb,0,ii],node_A[bb,1,ii]], [node_A[bb,0,node], node_A[bb,1,node]]])
+      #           lineseg2 = torch.tensor([[node_A[bb,0,p1], node_A[bb,1,p1]], [node_A[bb,0,p2], node_A[bb,1,p2]]])
+      #           if intersects(lineseg1, lineseg2):
+      #             edges[bb,edge,node] = 0
+      #             break
+
+    
+
 
       A[:, ii:jj, :jj] = edges
 
@@ -632,7 +652,7 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      node_attribute_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, selection=node_idx_feat)
+      node_attribute_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, node_idx_gnn, subgraph_idx, label, selection=node_idx_feat)
       edge_attribute_loss = edge_classification(edge_attributes_pred, edge_attributes_truth, self.edge_attribute_loss_func)
       # Oliver har leget med cross loss her...
       # A, node_A, edge_A = self._sampling(1)
@@ -769,7 +789,7 @@ def edge_classification(pred, truth, pos_loss_func):
     loss[y] = torch.sqrt(pos_loss_func(pred[x],truth[y]))
   return loss
 
-def one_dimensional_loss(pred, truth, pos_loss_func, selection):
+def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx, label, selection):
   """
     Args:
       pos_true: N X 2, Ground truth positional values
@@ -782,8 +802,21 @@ def one_dimensional_loss(pred, truth, pos_loss_func, selection):
   """
   pred = [pred[i].t() for i in range(len(pred))]
   loss = dict()
+  max_subgraph = subgraph_idx[-1]+1
+  predx = []
+  predy = []
+  for subgraph in range(max_subgraph):
+    l = label[subgraph_idx==subgraph]
+    if sum(l):
+      predx.append( torch.mean(pred[0][0,label==1][subgraph_idx[label==1]==subgraph]  ))
+      predy.append( torch.mean(pred[1][0,label==1][subgraph_idx[label==1]==subgraph] ))
+    else:
+      predx.append( torch.mean(pred[0][0,subgraph_idx==subgraph])  )
+      predy.append( torch.mean(pred[1][0,subgraph_idx==subgraph])  )
+  pred[0] = torch.stack(predx)
+  pred[1] = torch.stack(predy)
   for (x,y) in zip(range(len(pred)),truth):
-    loss[y] = pos_loss_func(pred[x], truth[y] )
+    loss[y] = pos_loss_func(pred[x], truth[y][selection==0] )
   return loss
 
   
