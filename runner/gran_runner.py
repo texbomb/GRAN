@@ -195,11 +195,11 @@ class GranRunner(object):
           lr=self.train_conf.lr,
           momentum=self.train_conf.momentum,
           weight_decay=self.train_conf.wd)
-      lr_scheduler = optim.lr_scheduler.CyclicLR(
-      optimizer, 
-      base_lr=1.0e-4, 
-      max_lr=1.0e-2,
-      step_size_up=1000)
+      # lr_scheduler = optim.lr_scheduler.CyclicLR(
+      # optimizer, 
+      # base_lr=1.0e-4, 
+      # max_lr=1.0e-2,
+      # step_size_up=1000)
     elif self.train_conf.optimizer == 'Adam':
       optimizer = optim.Adam(params, lr=self.train_conf.lr, weight_decay=self.train_conf.wd)
       # lr_scheduler = optim.lr_scheduler.CyclicLR(
