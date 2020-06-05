@@ -529,11 +529,14 @@ class GRANMixtureBernoulli(nn.Module):
       
       for attribute_layer in range(node_attributes_dim):
         pred = self.output_node_attributes[attribute_layer](diff).reshape(B,-1)
-        if ii == 0:
-          node_A[:,attribute_layer,ii:jj] = pred[:,ii:jj]
-        else:
-          pred = torch.stack([torch.mean(pred[bb][edges[bb,0]==1]) for bb in range(B)])
-          node_A[:,attribute_layer,ii:jj] = pred.reshape(B,-1)
+        for bb in range(B):
+          if torch.sum(edges[bb,0]==1) == 0:
+            node_A[bb,attribute_layer,ii:jj] = torch.mean( pred[bb][0] )
+          else:
+            node_A[bb,attribute_layer,ii:jj] = torch.mean(pred[bb][edges[bb,0]==1])
+
+      #           predx.append( torch.mean(pred[0][0,subgraph_idx==subgraph])  )
+      # predy.append( torch.mean(pred[1][0,subgraph_idx==subgraph])  )
 
     # l = label[subgraph_idx==subgraph]
     # if sum(l):
