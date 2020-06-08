@@ -150,7 +150,7 @@ class GranRunner(object):
     logger.info('No Edges vs. Edges in training set = {}'.format(
         self.config.dataset.sparse_ratio))
 
-    self.num_nodes_pmf_train = np.bincount([len(gg.nodes) for gg in self.graphs_train])    
+    self.num_nodes_pmf_train = np.bincount([len(gg.nodes) for gg in self.graphs_train])[1:]    
     self.max_num_nodes = len(self.num_nodes_pmf_train)
     self.num_nodes_pmf_train = self.num_nodes_pmf_train / self.num_nodes_pmf_train.sum()
     
@@ -308,7 +308,7 @@ class GranRunner(object):
         train_loss = float(avg_train_loss.data.cpu().numpy())
         adj_loss = float(avg_adj_loss.data.cpu().numpy())
         for attribute in self.config.attributes:
-              exec('' + attribute + '_loss = float(avg_adj_loss.data.cpu().numpy())')
+              exec('' + attribute + '_loss = float(avg_' + attribute + '_loss.data.cpu().numpy())')
         
         self.writer.add_scalar('train_loss', train_loss, iter_count)
         self.writer.add_scalar('adj_loss', adj_loss, iter_count) 

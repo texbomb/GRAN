@@ -22,14 +22,14 @@ dataset:
   is_overwrite_precompute: true
 model:
   name: GRANMixtureBernoulli
-  num_mix_component: 10
+  num_mix_component: 8
   is_sym: true
   block_size: 1
   sample_stride: 1
   max_num_nodes: 100
-  hidden_dim: 32 # Skal være ens med embedding_Dim
-  embedding_dim: 32
-  num_GNN_layers: 4
+  hidden_dim: 8 # Skal være ens med embedding_Dim
+  embedding_dim: 8
+  num_GNN_layers: 3
   num_GNN_prop: 1
   num_canonical_order: 3
   dimension_reduce: true
@@ -41,18 +41,18 @@ train:
   lr_decay_epoch: [2000] # no decay
   num_workers: 0
   max_epoch: 30000
-  batch_size: 3
+  batch_size: 10
   display_iter: 100
   snapshot_epoch: 500
   valid_epoch: 100
-  lr: 1.0e-3
+  lr: 1.0e-2
   wd: 0.0e-4
   momentum: 0.9
   shuffle: true
-  is_resume: False
-  resume_epoch: 1600
-  resume_dir: C:\Users\johanoliver\Documents\GitHub\GRAN\exp\GRAN\us_cities_2
-  resume_model: model_snapshot_0001600.pth
+  is_resume: True
+  resume_epoch: 10000
+  resume_dir: C:\Users\johanoliver\Documents\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Jun-08-19-57-13_11800
+  resume_model: model_snapshot_0010000.pth
 test:
   batch_size: 2
   num_workers: 0
@@ -63,8 +63,8 @@ test:
   num_vis: 10
   vis_num_row: 5 # visualize `num_vis` samples in `vis_num_row` rows
   better_vis: true
-  test_model_dir: C:\Users\johanoliver\Documents\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Jun-07-21-20-44_13196
-  test_model_name: model_snapshot_0006500.pth
+  test_model_dir: C:\Users\johanoliver\Documents\GitHub\GRAN\exp\GRAN\GRANMixtureBernoulli_transport_2020-Jun-08-19-57-13_11800
+  test_model_name: model_snapshot_0010000.pth
 attributes:
   x:
    node_feature: true  #If false, it must be an edge feature

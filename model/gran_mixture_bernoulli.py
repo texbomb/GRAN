@@ -512,6 +512,7 @@ class GRANMixtureBernoulli(nn.Module):
       log_alpha = log_alpha.view(B, -1, self.num_mix_component)  # B X K X (ii+K)
       prob_alpha = log_alpha.mean(dim=1).exp()      
       alpha = torch.multinomial(prob_alpha, 1).squeeze(dim=1).long()
+      
 
       prob = []
       for bb in range(B):
@@ -527,7 +528,7 @@ class GRANMixtureBernoulli(nn.Module):
       for attribute_layer in range(node_attributes_dim):
         pred = self.output_node_attributes[attribute_layer](diff).reshape(B,-1, self.num_mix_component) #, self.num_mix_component)
         for bb in range(B):
-          node_A[bb,attribute_layer,ii:jj] = torch.mean(prob[bb,0]*pred[bb,:,alpha[bb]]).round()
+          node_A[bb,attribute_layer,ii:jj] = torch.mean(pred[bb,:,alpha[bb]]+node_A[bb,attribute_layer,:jj]).round()
           # if torch.sum(edges[bb,0]==1) == 0:
           #   node_A[bb,attribute_layer,ii:jj] = torch.mean(pred[bb][edges[bb,0]==0]) 
           # else:
@@ -755,6 +756,7 @@ def total_loss_function(adj_loss, *losses): #crosses,
   #   print(adj_loss)
   #   print(0.1 * sum(losses[0].values()))
     #print(cross_edge_loss)
+
   #print(adj_loss, pos_loss)
   return total_loss, adj_loss, losses[0]
 
@@ -809,7 +811,9 @@ def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx,
   # #NYESTE
 
   #Take 
-  O = pred[0].T #*torch.sigmoid(log_theta)
+  # truth['x'].expand(K,N_max).T
+  
+  O = pred[0].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['x']).expand(K,N_max).T #*torch.sigmoid(log_theta)
   reduce_O = torch.zeros(max_subgraph, K).to(label.device)
   #Take mean of position according
   red = reduce_O.scatter_add(
@@ -819,21 +823,20 @@ def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx,
   t1 = truth['x'][selection==0].unsqueeze(1).expand(-1,K)
   l1 = pos_loss_func(red, t1)
   #l1 = torch.stack([pos_loss_func(red[subgraph, kk], truth['x'][selection==0][subgraph]) for subgraph in range(max_subgraph) for kk in range(K)]).view(max_subgraph,K)
-
-
-  loss['x'] = -torch.logsumexp(-l1+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
-
-  O = pred[1].T #*torch.sigmoid(log_theta)
+  #loss['x'] = -torch.logsumexp(-l1+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
+  loss['x'] = torch.zeros(1).to(label.device)
+  
+  O = pred[1].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['y']).expand(K,N_max).T #*torch.sigmoid(log_theta)
   reduce_O = torch.zeros(max_subgraph, K).to(label.device)
   #Take mean of position according
-  red = reduce_O.scatter_add(
+  red2 = reduce_O.scatter_add(
       0, subgraph_idx.unsqueeze(1).expand(-1, K), O)
-  red = red / const.view(-1, 1)
+  red2 = red2 / const.view(-1, 1)
   
   t2 = truth['y'][selection==0].unsqueeze(1).expand(-1,K)
-  l2 = pos_loss_func(red, t2)
+  l2 = pos_loss_func(red2, t2)
   #l2 = torch.stack([pos_loss_func(red[subgraph, kk], truth['y'][selection==0][subgraph]) for subgraph in range(max_subgraph) for kk in range(K)]).view(max_subgraph,K)
-  loss['y'] = -torch.logsumexp(-l2+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
+  loss['y'] = -torch.logsumexp(-l1-l2+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
 
   # pred[0] = torch.mean( pred[0].T.expand(N_max,K)*torch.sigmoid(log_theta), dim=1)  
   # pred[1] = torch.mean( pred[1].T.expand(N_max,K)*torch.sigmoid(log_theta), dim=1)  
