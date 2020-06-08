@@ -183,7 +183,7 @@ class GRANData(object):
 
     if self.num_canonical_order == 5:
       adj_list = [adj_0, adj_1, adj_3, adj_4, adj_5]
-      attribute_dic = [d[0],d[1],d[3],d[4],d[5]]
+      attribute_dic = [d[0],d[1],d[3],d[4],d[5]] # 1313
     else:
       if self.node_order == 'degree_decent':
         adj_list = [adj_1]
