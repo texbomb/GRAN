@@ -5,6 +5,6 @@
 		}
 	],
 	"settings": {
-		"python.pythonPath": "C:\\Users\\johan\\Documents\\Bachelor\\python.exe"
+		"python.pythonPath": "C:\\Miniconda\\envs\\Bachelor2\\python.exe"
 	}
 }

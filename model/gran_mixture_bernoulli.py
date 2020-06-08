@@ -528,7 +528,7 @@ class GRANMixtureBernoulli(nn.Module):
       for attribute_layer in range(node_attributes_dim):
         pred = self.output_node_attributes[attribute_layer](diff).reshape(B,-1, self.num_mix_component) #, self.num_mix_component)
         for bb in range(B):
-          node_A[bb,attribute_layer,ii:jj] = torch.mean(pred[bb,:,alpha[bb]]+node_A[bb,attribute_layer,:jj]).round()
+          node_A[bb,attribute_layer,ii:jj] = torch.mean(pred[bb,:,alpha[bb]]) #prob[bb,0]*
           # if torch.sum(edges[bb,0]==1) == 0:
           #   node_A[bb,attribute_layer,ii:jj] = torch.mean(pred[bb][edges[bb,0]==0]) 
           # else:
@@ -654,7 +654,7 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      node_attribute_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, node_idx_gnn, subgraph_idx, label, log_theta, log_alpha, selection=node_idx_feat)
+      node_attribute_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, self.adj_loss_func, node_idx_gnn, subgraph_idx, label, log_theta, log_alpha, selection=node_idx_feat)
       edge_attribute_loss = edge_classification(edge_attributes_pred, edge_attributes_truth, self.edge_attribute_loss_func)
       # Oliver har leget med cross loss her...
       # A, node_A, edge_A = self._sampling(1)
@@ -751,7 +751,7 @@ def total_loss_function(adj_loss, *losses): #crosses,
   # print(f"pos_loss: {pos_loss * 0.15 }")
   # print(f"adj_loss: {adj_loss}")
 
-  total_loss = adj_loss  + sum(losses[0].values())# + crosses
+  total_loss = sum(losses[0].values())# + crosses
   # if total_loss < 3:
   #   print(adj_loss)
   #   print(0.1 * sum(losses[0].values()))
@@ -777,7 +777,7 @@ def edge_classification(pred, truth, pos_loss_func):
     loss[y] = torch.sqrt(pos_loss_func(pred[x],truth[y]))
   return loss
 
-def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx, label, log_theta, log_alpha, selection):
+def one_dimensional_loss(pred, truth, pos_loss_func, adj_loss_func, node_idx_gnn, subgraph_idx, label, log_theta, log_alpha, selection):
   """
     Args:
       pos_true: N X 2, Ground truth positional values
@@ -813,7 +813,7 @@ def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx,
   #Take 
   # truth['x'].expand(K,N_max).T
   
-  O = pred[0].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['x']).expand(K,N_max).T #*torch.sigmoid(log_theta)
+  O = pred[0].T #pred[0].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['x']).expand(K,N_max).T #*torch.sigmoid(log_theta)
   reduce_O = torch.zeros(max_subgraph, K).to(label.device)
   #Take mean of position according
   red = reduce_O.scatter_add(
@@ -823,10 +823,11 @@ def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx,
   t1 = truth['x'][selection==0].unsqueeze(1).expand(-1,K)
   l1 = pos_loss_func(red, t1)
   #l1 = torch.stack([pos_loss_func(red[subgraph, kk], truth['x'][selection==0][subgraph]) for subgraph in range(max_subgraph) for kk in range(K)]).view(max_subgraph,K)
+
+
   #loss['x'] = -torch.logsumexp(-l1+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
   loss['x'] = torch.zeros(1).to(label.device)
-  
-  O = pred[1].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['y']).expand(K,N_max).T #*torch.sigmoid(log_theta)
+  O = pred[1].T #*torch.sigmoid(log_theta)
   reduce_O = torch.zeros(max_subgraph, K).to(label.device)
   #Take mean of position according
   red2 = reduce_O.scatter_add(
@@ -836,7 +837,21 @@ def one_dimensional_loss(pred, truth, pos_loss_func, node_idx_gnn, subgraph_idx,
   t2 = truth['y'][selection==0].unsqueeze(1).expand(-1,K)
   l2 = pos_loss_func(red2, t2)
   #l2 = torch.stack([pos_loss_func(red[subgraph, kk], truth['y'][selection==0][subgraph]) for subgraph in range(max_subgraph) for kk in range(K)]).view(max_subgraph,K)
-  loss['y'] = -torch.logsumexp(-l1-l2+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
+  #loss['y'] = -torch.logsumexp(-l1-l2+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
+
+  num_subgraph = subgraph_idx.max() + 1
+  K = log_theta.shape[1]
+  adj_loss = torch.stack(
+      [adj_loss_func(log_theta[:, kk], label) for kk in range(K)], dim=1)
+
+  reduce_adj_loss = torch.zeros(num_subgraph, K).to(label.device)
+  reduce_adj_loss = reduce_adj_loss.scatter_add(
+      0, subgraph_idx.unsqueeze(1).expand(-1, K), adj_loss)
+
+  log_prob = -reduce_adj_loss + reduce_log_alpha - l1 - l2
+  log_prob = torch.logsumexp(log_prob, dim=1)
+  loss['y'] = -log_prob.sum() / float(log_theta.shape[0])
+ 
 
   # pred[0] = torch.mean( pred[0].T.expand(N_max,K)*torch.sigmoid(log_theta), dim=1)  
   # pred[1] = torch.mean( pred[1].T.expand(N_max,K)*torch.sigmoid(log_theta), dim=1)  
