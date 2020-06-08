@@ -848,7 +848,7 @@ def one_dimensional_loss(pred, truth, pos_loss_func, adj_loss_func, node_idx_gnn
   reduce_adj_loss = reduce_adj_loss.scatter_add(
       0, subgraph_idx.unsqueeze(1).expand(-1, K), adj_loss)
 
-  log_prob = -reduce_adj_loss + reduce_log_alpha - l1 - l2
+  log_prob = -reduce_adj_loss + reduce_log_alpha - 10 * l1 - 10 *  l2
   log_prob = torch.logsumexp(log_prob, dim=1)
   loss['y'] = -log_prob.sum() / float(log_theta.shape[0])
  
