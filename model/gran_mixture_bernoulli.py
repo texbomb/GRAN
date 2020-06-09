@@ -813,7 +813,7 @@ def one_dimensional_loss(pred, truth, pos_loss_func, adj_loss_func, node_idx_gnn
   #Take 
   # truth['x'].expand(K,N_max).T
   
-  O = pred[0].T #pred[0].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['x']).expand(K,N_max).T #*torch.sigmoid(log_theta)
+  O = pred[0].T+torch.where(selection==0, torch.zeros(1).to(label.device), truth['x']).expand(K,N_max).T #*torch.sigmoid(log_theta)
   reduce_O = torch.zeros(max_subgraph, K).to(label.device)
   #Take mean of position according
   red = reduce_O.scatter_add(
@@ -827,7 +827,7 @@ def one_dimensional_loss(pred, truth, pos_loss_func, adj_loss_func, node_idx_gnn
 
   #loss['x'] = -torch.logsumexp(-l1+reduce_log_alpha, dim=1).sum() / float(log_theta.shape[0])
   loss['x'] = torch.zeros(1).to(label.device)
-  O = pred[1].T #*torch.sigmoid(log_theta)
+  O = pred[1].T + torch.where(selection==0, torch.zeros(1).to(label.device), truth['y']).expand(K,N_max).T  #*torch.sigmoid(log_theta)
   reduce_O = torch.zeros(max_subgraph, K).to(label.device)
   #Take mean of position according
   red2 = reduce_O.scatter_add(
