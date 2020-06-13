@@ -33,6 +33,22 @@ def create_graph():
 
 G = create_graph() 
 
+def grid_graphs(x,y):
+    G = nx.grid_2d_graph(x,y)
+
+    for i in range(x):
+        for j in range(y):
+            G.nodes[i,j]['x'] = i*0.1 + 0.1
+            G.nodes[i,j]['y'] = j*0.1 + 0.1
+
+    return G
+
+def create_grid_graphs(minx,maxx,miny,maxy):
+    glist = []
+    for i in range(minx,maxx+1):
+        for j in range(miny,maxy+1):
+            glist.append(grid_graphs(i,j))
+    return glist
 def rotate_graph(G, degrees=0, point= 'in_place'):
     """
     Rotates a networkx graph object around a point with a given angle in degrees
@@ -166,7 +182,13 @@ def save_graphs(graph, num_graphs):
         G = graph
         with open(f'train_random_20{n}.pickle', 'wb') as handle:
             pickle.dump(G, handle)
+
+def save_graph_list(graphlist):
+    for n in range(len(graphlist)):
+        with open(f'train_grid{n}.pickle', 'wb') as handle:
+            pickle.dump(graphlist[n], handle)   
             
+                   
 save_graphs(G, 10)
 
 # Create x number of graphs and saves them
