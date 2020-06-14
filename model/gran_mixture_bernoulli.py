@@ -674,6 +674,34 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
   l0 = pos_loss_func(pred[0], t0)
   l1 = pos_loss_func(pred[1], t1)
 
+
+  x1 = pred[0][label==1]
+  x2 = pred[0][selection==0][subgraph_idx[label==1]]
+  y1 = pred[1][label==1]
+  y2 = pred[1][selection==0][subgraph_idx[label==1]]
+  pred_length = torch.sqrt( (x2 - x1)**2 + (y2 - y1)**2 ) 
+  pred_bearing = torch.atan((y2-y1)/(x2-x1))
+
+  x1 = truth['x'][label==1]
+  x2 = truth['x'][selection==0][subgraph_idx[label==1]]
+  y1 = truth['y'][label==1]
+  y2 = truth['y'][selection==0][subgraph_idx[label==1]]
+  true_length = torch.sqrt( (x2 - x1)**2 + (y2 - y1)**2 ) 
+  true_bearing = torch.atan((y2-y1)/(x2-x1))
+
+  length_loss = pos_loss_func(pred_length, true_length.expand(K,-1).T)
+
+  reduce_length = torch.zeros(num_subgraph, K).to(label.device)
+  reduce_length = reduce_length.scatter_add(
+      0, subgraph_idx[label==1].unsqueeze(1).expand(-1, K), length_loss)  
+
+  bearing_loss = pos_loss_func(pred_bearing, true_bearing.expand(K,-1).T)
+
+  reduce_bearing = torch.zeros(num_subgraph, K).to(label.device)
+  reduce_bearing = reduce_bearing.scatter_add(
+      0, subgraph_idx[label==1].unsqueeze(1).expand(-1, K), bearing_loss)  
+
+
   reduce_l0 = torch.zeros(num_subgraph, K).to(label.device)
   reduce_l0 = reduce_l0.scatter_add(
       0, subgraph_idx.unsqueeze(1).expand(-1, K), l0)
@@ -706,13 +734,15 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
   reduce_log_alpha = F.log_softmax(reduce_log_alpha, -1)
 
   #Calculate loss, where alpha is optimized
-  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha
+  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha - 100 * reduce_length - 10 * reduce_bearing
   log_prob = torch.logsumexp(log_prob, dim=1)
   prob_loss = -log_prob.sum() / float(pred[0].shape[0])
 
 
   loss['x']= -torch.logsumexp(-50*reduce_l0 + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
   loss['y'] = -torch.logsumexp(-50*reduce_l1 + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+  loss['length'] = -torch.logsumexp(-100 * reduce_length + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+  loss['bearing'] = -torch.logsumexp(-10 * reduce_bearing + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
   adj_loss = -torch.logsumexp(-reduce_adj_loss + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
 
   total_loss = prob_loss 
