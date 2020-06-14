@@ -51,7 +51,7 @@ class GNN(nn.Module):
             *[
                 nn.Linear( (self.edge_attribute_dim + 1) * self.node_state_dim + self.edge_feat_dim + self.node_attribute_dim, 
                           self.msg_dim),  
-                nn.Dropout(p=0.2),              
+                #nn.Dropout(p=0.2),              
                 nn.ReLU(),
                 nn.Linear(self.msg_dim, self.msg_dim)
             ]) for _ in range(self.num_layer)
@@ -206,7 +206,7 @@ class GRANMixtureBernoulli(nn.Module):
           nn.Linear(self.hidden_dim, self.hidden_dim),
           #nn.BatchNorm1d(self.hidden_dim),
           nn.ReLU(inplace=True),
-          nn.Linear(self.hidden_dim, 1)
+          nn.Linear(self.hidden_dim, self.output_dim * self.num_mix_component)
         ]) for _ in range(self.node_attributes_dim)
     ])
 
@@ -258,8 +258,8 @@ class GRANMixtureBernoulli(nn.Module):
     self.adj_loss_func = nn.BCEWithLogitsLoss(
         pos_weight=pos_weight, reduction='none')
         
-    self.node_attribute_loss_func = nn.MSELoss()
-    self.edge_attribute_loss_func = nn.MSELoss()
+    self.node_attribute_loss_func = nn.MSELoss(reduction='none')
+    self.edge_attribute_loss_func = nn.MSELoss(reduction='none')
   def _inference(self,
                  A_pad=None,
                  edges=None,
@@ -350,7 +350,7 @@ class GRANMixtureBernoulli(nn.Module):
     edge_attributes_pred = []
     # Predict node attributes
     for attribute_layer in range(len(node_attributes)):
-      node_attributes_pred.append( self.output_node_attributes[attribute_layer](node_state[node_idx_feat==0]) )
+      node_attributes_pred.append( self.output_node_attributes[attribute_layer](node_state) )
     # Predict edge attributes
     for attribute_layer in range(len(edge_attributes)):
       edge_attributes_pred.append( self.output_edge_attributes[attribute_layer](diff) ) #Predict på edges !!"!" KIG her
@@ -481,14 +481,6 @@ class GRANMixtureBernoulli(nn.Module):
       log_theta = self.output_theta(diff)
       log_alpha = self.output_alpha(diff)
 
-      for attribute_layer in range(edge_attributes_dim):
-        pred = self.output_edge_attributes[attribute_layer](diff)
-        edge_A[:,attribute_layer, ii:jj, :jj] = pred.reshape(B,self.edge_attributes_dim,-1)
-      
-      for attribute_layer in range(node_attributes_dim):
-        pred = self.output_node_attributes[attribute_layer](node_state_out)
-        node_A[:,attribute_layer,ii:jj] = pred.reshape(B,-1)[:,ii:jj]
-
       log_theta = log_theta.view(B, -1, K, self.num_mix_component)  # B X K X (ii+K) X L
       log_theta = log_theta.transpose(1, 2)  # B X (ii+K) X K X L
 
@@ -496,9 +488,18 @@ class GRANMixtureBernoulli(nn.Module):
       prob_alpha = log_alpha.mean(dim=1).exp()      
       alpha = torch.multinomial(prob_alpha, 1).squeeze(dim=1).long()
 
+
       prob = []
       for bb in range(B):
         prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
+
+        for attribute_layer in range(node_attributes_dim):
+          pred = self.output_node_attributes[attribute_layer](node_state_out).reshape(B,-1,self.num_mix_component)
+          node_A[:,attribute_layer,ii:jj] = pred[bb,ii:jj,alpha[bb]]
+        
+        for attribute_layer in range(edge_attributes_dim):
+          pred = self.output_edge_attributes[attribute_layer](diff).reshape(B,-1,self.num_mix_component)
+          edge_A[:,attribute_layer, ii:jj, :jj] = pred[:,:,alpha[B]]
 
       prob = torch.stack(prob, dim=0)
       A[:, ii:jj, :jj] = torch.bernoulli(prob[:, :jj - ii, :])
@@ -592,9 +593,9 @@ class GRANMixtureBernoulli(nn.Module):
                                         self.adj_loss_func, subgraph_idx)
       adj_loss = adj_loss * float(self.num_canonical_order)
 
-      node_attribute_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, selection=node_idx_feat)
+      total_loss = one_dimensional_loss(node_attributes_pred, node_attributes_truth, self.node_attribute_loss_func, log_alpha, log_theta, self.adj_loss_func, subgraph_idx, label, selection=node_idx_feat)
       edge_attribute_loss = edge_classification(edge_attributes_pred, edge_attributes_truth, self.edge_attribute_loss_func)
-      total_loss = total_loss_function(adj_loss, node_attribute_loss, edge_attribute_loss) 
+      #total_loss = total_loss_function(adj_loss, node_attribute_loss, edge_attribute_loss) 
 
       return total_loss
       
@@ -627,7 +628,7 @@ def total_loss_function(adj_loss, *losses):
   # print(f"pos_loss: {pos_loss * 0.15 }")
   # print(f"adj_loss: {adj_loss}")
 
-  total_loss =  adj_loss + 0.1 * sum(losses[0].values())
+  total_loss =  adj_loss + sum(losses[0].values())
   #print(adj_loss, pos_loss)
   return total_loss, adj_loss, losses[0]
 
@@ -648,7 +649,7 @@ def edge_classification(pred, truth, pos_loss_func):
     loss[y] = torch.sqrt(pos_loss_func(pred[x],truth[y]))
   return loss
 
-def one_dimensional_loss(pred, truth, pos_loss_func, selection):
+def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_loss_func, subgraph_idx, label, selection):
   """
     Args:
       pos_true: N X 2, Ground truth positional values
@@ -659,11 +660,65 @@ def one_dimensional_loss(pred, truth, pos_loss_func, selection):
     Returns:
       loss: mean squared error 
   """
-  pred = [pred[i].t() for i in range(len(pred))]
+  num_subgraph = subgraph_idx.max() + 1
+  N, K = pred[0].shape
   loss = dict()
-  for (x,y) in zip(range(len(pred)),truth):
-    loss[y] = pos_loss_func(pred[x],truth[y][selection==0])
-  return loss
+
+    
+  const = torch.zeros(num_subgraph).to(pred[0].device)
+  const = const.scatter_add(0, subgraph_idx,
+                            torch.ones_like(subgraph_idx).float())
+
+  t0 = truth['x'].expand(K,-1).T
+  t1 = truth['y'].expand(K,-1).T
+  l0 = pos_loss_func(pred[0], t0)
+  l1 = pos_loss_func(pred[1], t1)
+
+  reduce_l0 = torch.zeros(num_subgraph, K).to(label.device)
+  reduce_l0 = reduce_l0.scatter_add(
+      0, subgraph_idx.unsqueeze(1).expand(-1, K), l0)
+  reduce_l1 = torch.zeros(num_subgraph, K).to(label.device)
+  reduce_l1 = reduce_l1.scatter_add(
+      0, subgraph_idx.unsqueeze(1).expand(-1, K), l1)
+  # reduce_l0 = torch.zeros(num_subgraph, K).to(pred[0].device)
+  # reduce_l0 = reduce_l0.scatter_add(
+  #     0, subgraph_idx.unsqueeze(1).expand(-1, K), l0)
+  # reduce_l0 = reduce_l0 / const.view(-1, 1)
+
+  # reduce_l1 = torch.zeros(num_subgraph, K).to(pred[0].device)
+  # reduce_l1 = reduce_l1.scatter_add(
+  #     0, subgraph_idx.unsqueeze(1).expand(-1, K), l1)
+  # reduce_l1 = reduce_l1 / const.view(-1, 1)
+
+
+  #Calculate adj and log alpha
+  adj_loss = torch.stack(
+      [adj_loss_func(log_theta[:, kk], label) for kk in range(K)], dim=1)
+
+  reduce_adj_loss = torch.zeros(num_subgraph, K).to(label.device)
+  reduce_adj_loss = reduce_adj_loss.scatter_add(
+      0, subgraph_idx.unsqueeze(1).expand(-1, K), adj_loss)
+
+  reduce_log_alpha = torch.zeros(num_subgraph, K).to(pred[0].device)
+  reduce_log_alpha = reduce_log_alpha.scatter_add(
+      0, subgraph_idx.unsqueeze(1).expand(-1, K), log_alpha)
+  reduce_log_alpha = reduce_log_alpha / const.view(-1, 1)
+  reduce_log_alpha = F.log_softmax(reduce_log_alpha, -1)
+
+  #Calculate loss, where alpha is optimized
+  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha
+  log_prob = torch.logsumexp(log_prob, dim=1)
+  prob_loss = -log_prob.sum() / float(pred[0].shape[0])
+
+
+  loss['x']= -torch.logsumexp(-50*reduce_l0 + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+  loss['y'] = -torch.logsumexp(-50*reduce_l1 + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+  adj_loss = -torch.logsumexp(-reduce_adj_loss + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+
+  total_loss = prob_loss 
+  # for (x,y) in zip(range(len(pred)),truth):
+  #   loss[y] = pos_loss_func(pred[x],truth[y][selection==0])
+  return total_loss, adj_loss, loss
 
   
 def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,
