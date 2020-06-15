@@ -212,6 +212,8 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
         name='FIRSTMM_DB',
         node_attributes=False,
         graph_labels=True)
+  elif graph_type == 'Transport':
+    graphs = get_transport_graphs(data_dir)
 
   num_nodes = [gg.number_of_nodes() for gg in graphs]
   num_edges = [gg.number_of_edges() for gg in graphs]
@@ -220,3 +222,15 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
    
   return graphs
 
+def get_transport_graphs(data_dir):
+    # Opens dir and gets number of items in the dir
+    folder_items = os.listdir(p) # dir is your directory path
+    # Adds every graph to the list of total graphs
+    graphs = []
+    for file in folder_items:
+        file = f'{p}/{file}'
+        if os.path.isfile(file):
+          with open(file, 'rb') as handle:
+              graph = pickle.load(handle)
+              graphs.append(graph)    
+    return graphs

@@ -326,6 +326,13 @@ class GranRunner(object):
       # remove isolated nodes for better visulization
       graphs_pred_vis = [copy.deepcopy(gg) for gg in graphs_gen[:self.num_vis]]
 
+      # Saves Graphs
+      for i, gg in enumerate(graphs_pred_vis):
+        G = gg
+        name = os.path.join(self.config.save_dir, '{}_gen_graphs_epoch_{}_{}.pickle'.format(self.config.test.test_model_name[:-4], test_epoch, i))
+        with open(name, 'wb') as handle:
+          pickle.dump(G, handle)
+
       if self.better_vis:
         for gg in graphs_pred_vis:
           gg.remove_nodes_from(list(nx.isolates(gg)))
