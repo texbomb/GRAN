@@ -224,11 +224,11 @@ def create_graphs(graph_type, data_dir='data', noise=10.0, seed=1234):
 
 def get_transport_graphs(data_dir):
     # Opens dir and gets number of items in the dir
-    folder_items = os.listdir(p) # dir is your directory path
+    folder_items = os.listdir(data_dir) # dir is your directory path
     # Adds every graph to the list of total graphs
     graphs = []
     for file in folder_items:
-        file = f'{p}/{file}'
+        file = f'{data_dir}/{file}'
         if os.path.isfile(file):
           with open(file, 'rb') as handle:
               graph = pickle.load(handle)
