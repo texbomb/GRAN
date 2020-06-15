@@ -385,6 +385,8 @@ class GRANMixtureBernoulli(nn.Module):
     edge_A = torch.zeros(B, edge_attributes_dim, N_pad, N_pad).to(self.device)
     node_A = torch.zeros(B, node_attributes_dim, N_pad).to(self.device)
 
+    alpha_list = torch.zeros(B, N_pad)
+
     dim_input = self.embedding_dim if self.dimension_reduce else self.max_num_nodes
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
@@ -469,7 +471,7 @@ class GRANMixtureBernoulli(nn.Module):
           node_state_in.view(-1, H), edges,
            edge_feat=att_edge_feat,
            edge_attributes = edge_state_in.view(edge_attributes_dim,-1,H) if edge_attributes_dim else [],
-           node_attributes= node_attribute_state_in.view(node_attributes_dim,-1) if node_attributes_dim else [])
+           node_attributes= torch.cat([node_attribute_state_in[bb] for bb in range(B)],dim=1) if node_attributes_dim else [])
       node_state_out = node_state_out.view(B, jj, -1)
 
       idx_row, idx_col = np.meshgrid(np.arange(ii, jj), np.arange(jj))
@@ -487,6 +489,8 @@ class GRANMixtureBernoulli(nn.Module):
       log_alpha = log_alpha.view(B, -1, self.num_mix_component)  # B X K X (ii+K)
       prob_alpha = log_alpha.mean(dim=1).exp()      
       alpha = torch.multinomial(prob_alpha, 1).squeeze(dim=1).long()
+
+      alpha_list[:,ii:jj] = alpha.view(B,-1)
 
 
       prob = []
@@ -515,7 +519,7 @@ class GRANMixtureBernoulli(nn.Module):
     #print(node_pos)
     #print(A)
 
-    return A, node_A, edge_A
+    return A, node_A, edge_A, alpha_list
 
   def forward(self, input_dict):
     """
@@ -600,7 +604,7 @@ class GRANMixtureBernoulli(nn.Module):
       return total_loss
       
     else:
-      A, node_A, edge_A = self._sampling(batch_size)
+      A, node_A, edge_A, alpha_list = self._sampling(batch_size)
 
       ### sample numbatber of nodes
       num_nodes_pmf = torch.from_numpy(num_nodes_pmf).to(self.device)
@@ -616,8 +620,11 @@ class GRANMixtureBernoulli(nn.Module):
       edge_A_list = [
           edge_A[ii,:, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
       ]
+      alpha_list = [
+          alpha_list[ii, :num_nodes[ii]] for ii in range(batch_size)
+      ]
       #print(A_list)
-      return A_list, node_A_list, edge_A_list
+      return A_list, node_A_list, edge_A_list, alpha_list
 
 # Total loss -> combined adj and positional loss. Need to be tuned with an alpha 
 
@@ -671,35 +678,8 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
 
   t0 = truth['x'].expand(K,-1).T
   t1 = truth['y'].expand(K,-1).T
-  l0 = pos_loss_func(pred[0], t0)
-  l1 = pos_loss_func(pred[1], t1)
-
-
-  x1 = pred[0][label==1]
-  x2 = pred[0][selection==0][subgraph_idx[label==1]]
-  y1 = pred[1][label==1]
-  y2 = pred[1][selection==0][subgraph_idx[label==1]]
-  pred_length = torch.sqrt( (x2 - x1)**2 + (y2 - y1)**2 ) 
-  pred_bearing = torch.atan((y2-y1)/(x2-x1))
-
-  x1 = truth['x'][label==1]
-  x2 = truth['x'][selection==0][subgraph_idx[label==1]]
-  y1 = truth['y'][label==1]
-  y2 = truth['y'][selection==0][subgraph_idx[label==1]]
-  true_length = torch.sqrt( (x2 - x1)**2 + (y2 - y1)**2 ) 
-  true_bearing = torch.atan((y2-y1)/(x2-x1))
-
-  length_loss = pos_loss_func(pred_length, true_length.expand(K,-1).T)
-
-  reduce_length = torch.zeros(num_subgraph, K).to(label.device)
-  reduce_length = reduce_length.scatter_add(
-      0, subgraph_idx[label==1].unsqueeze(1).expand(-1, K), length_loss)  
-
-  bearing_loss = pos_loss_func(pred_bearing, true_bearing.expand(K,-1).T)
-
-  reduce_bearing = torch.zeros(num_subgraph, K).to(label.device)
-  reduce_bearing = reduce_bearing.scatter_add(
-      0, subgraph_idx[label==1].unsqueeze(1).expand(-1, K), bearing_loss)  
+  l0 = torch.sqrt(pos_loss_func(pred[0], t0) + EPS)
+  l1 = torch.sqrt(pos_loss_func(pred[1], t1) + EPS)
 
 
   reduce_l0 = torch.zeros(num_subgraph, K).to(label.device)
@@ -708,15 +688,7 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
   reduce_l1 = torch.zeros(num_subgraph, K).to(label.device)
   reduce_l1 = reduce_l1.scatter_add(
       0, subgraph_idx.unsqueeze(1).expand(-1, K), l1)
-  # reduce_l0 = torch.zeros(num_subgraph, K).to(pred[0].device)
-  # reduce_l0 = reduce_l0.scatter_add(
-  #     0, subgraph_idx.unsqueeze(1).expand(-1, K), l0)
-  # reduce_l0 = reduce_l0 / const.view(-1, 1)
 
-  # reduce_l1 = torch.zeros(num_subgraph, K).to(pred[0].device)
-  # reduce_l1 = reduce_l1.scatter_add(
-  #     0, subgraph_idx.unsqueeze(1).expand(-1, K), l1)
-  # reduce_l1 = reduce_l1 / const.view(-1, 1)
 
 
   #Calculate adj and log alpha
@@ -734,15 +706,15 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
   reduce_log_alpha = F.log_softmax(reduce_log_alpha, -1)
 
   #Calculate loss, where alpha is optimized
-  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha - 100 * reduce_length - 10 * reduce_bearing
+  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha # - 100 * reduce_length - 10 * reduce_bearing
   log_prob = torch.logsumexp(log_prob, dim=1)
   prob_loss = -log_prob.sum() / float(pred[0].shape[0])
 
 
   loss['x']= -torch.logsumexp(-50*reduce_l0 + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
   loss['y'] = -torch.logsumexp(-50*reduce_l1 + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
-  loss['length'] = -torch.logsumexp(-100 * reduce_length + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
-  loss['bearing'] = -torch.logsumexp(-10 * reduce_bearing + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+  #loss['length'] = -torch.logsumexp(-100 * reduce_length + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
+  #loss['bearing'] = -torch.logsumexp(-10 * reduce_bearing + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
   adj_loss = -torch.logsumexp(-reduce_adj_loss + reduce_log_alpha, dim=1).sum() / float(pred[0].shape[0])
 
   total_loss = prob_loss 

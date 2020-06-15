@@ -85,22 +85,28 @@ def draw_graph_list_separate(G_list,
 
 
     if is_single:
+      #color map
+      node_cat = list(nx.get_node_attributes(G, 'alpha').values())
+
       # node_size default 60, edge_width default 1.5
       nx.draw_networkx_nodes(
           G,
           pos,
           node_size=node_size,
-          node_color='#336699',
+          node_color=node_cat,
+          cmap=plt.cm.tab20c,
           alpha=1,
           linewidths=0,
           font_size=0)      
       nx.draw_networkx_edges(G, pos, alpha=alpha, width=width)
     else:
+      node_cat = list(nx.get_node_attributes(G, 'alpha').values())
       nx.draw_networkx_nodes(
           G,
           pos,
           node_size=1.5,
-          node_color='#336699',
+          node_color=node_cat,
+          cmap=plt.cm.tab20c,
           alpha=1,
           linewidths=0.2,
           font_size=1.5
@@ -122,8 +128,8 @@ def draw_graph_list_separate(G_list,
     y_max = max(y_pos)
 
     plt.draw()
-    # plt.xlim(x_min-1, x_max+1)
-    # plt.ylim(y_min-1, y_max+1)
+    plt.xlim(x_min*0.6, x_max*1.2)
+    plt.ylim(y_min*0.6, y_max*1.2)
     plt.tight_layout()
     plt.savefig(fname+'_{:03d}.png'.format(i), dpi=300)
     plt.close()

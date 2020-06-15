@@ -56,7 +56,7 @@ def compute_edge_ratio(G_list):
   return ratio
 
 
-def get_graph(adj, node_pos):
+def get_graph(adj, node_pos, alpha_list):
   """ get a graph from zero-padded adj """
   # remove all zeros rows and columns
   adj = adj[~np.all(adj == 0, axis=1)]
@@ -66,8 +66,11 @@ def get_graph(adj, node_pos):
   
   # //Oliver converts the node list to a dict
   dict_pos = pos_list_to_dict(node_pos)
+  dict_alpha = alpha_list_to_dict(alpha_list)
   # // Oliver Combines the graph with it's positions 
   nx.set_node_attributes(G, dict_pos)
+
+  nx.set_node_attributes(G, dict_alpha)
   
   return G
 
@@ -79,7 +82,12 @@ def pos_list_to_dict(pos):
         dict_pos[i] = {"x": p[0], "y": p[1]}
     return dict_pos
 
-
+def alpha_list_to_dict(alpha_list):
+    """converts alpha_list list to dict """
+    dict_alpha_list = {}
+    for i, p in enumerate(alpha_list.astype(np.int16)):
+        dict_alpha_list[i] = {"alpha": p}
+    return dict_alpha_list
 
 def evaluate(graph_gt, graph_pred, degree_only=True):
   mmd_degree = degree_stats(graph_gt, graph_pred)
@@ -290,7 +298,7 @@ class GranRunner(object):
             train_loss, adj_loss, losses = model(*batch_fwd)            
             avg_train_loss += train_loss 
             avg_adj_loss += adj_loss
-            for attribute in self.config.attributes:
+            for attribute in losses:
               exec('avg_' + attribute + '_loss += losses[attribute]')
             #avg_pos_loss += pos_loss 
         
@@ -302,17 +310,17 @@ class GranRunner(object):
         optimizer.step()
         avg_train_loss /= float(self.dataset_conf.num_fwd_pass)
         avg_adj_loss /= float(self.dataset_conf.num_fwd_pass)
-        for attribute in self.config.attributes:
+        for attribute in losses:
               exec('avg_' + attribute + '_loss /= float(self.dataset_conf.num_fwd_pass)')
         # reduce
         train_loss = float(avg_train_loss.data.cpu().numpy())
         adj_loss = float(avg_adj_loss.data.cpu().numpy())
-        for attribute in self.config.attributes:
-              exec('' + attribute + '_loss = float(avg_adj_loss.data.cpu().numpy())')
+        for attribute in losses:
+              exec('' + attribute + '_loss = float(avg_' + attribute + '_loss.data.cpu().numpy())')
         
         self.writer.add_scalar('train_loss', train_loss, iter_count)
         self.writer.add_scalar('adj_loss', adj_loss, iter_count) 
-        for attribute in self.config.attributes:
+        for attribute in losses:
               exec("self.writer.add_scalar('" + attribute + "_loss', " + attribute + "_loss, iter_count)")
          
         results['train_loss'] += [train_loss]
@@ -354,6 +362,7 @@ class GranRunner(object):
       node_pred = []
       edge_pred = []
       num_nodes_pred = []
+      alpha_list = []
       num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
 
       gen_run_time = []
@@ -364,18 +373,20 @@ class GranRunner(object):
           input_dict['is_sampling']=True
           input_dict['batch_size']=self.test_conf.batch_size
           input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
-          A_tmp, node_temp, edge_temp = model(input_dict)
+          A_tmp, node_temp, edge_temp, alpha_temp = model(input_dict)
           gen_run_time += [time.time() - start_time]
           A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
           num_nodes_pred += [aa.shape[0] for aa in A_tmp]
           node_pred += [aa.data.cpu().numpy() for aa in node_temp]
           edge_pred += [aa.data.cpu().numpy() for aa in edge_temp]
+          edge_pred += [aa.data.cpu().numpy() for aa in edge_temp]
+          alpha_list += [aa.data.cpu().numpy() for aa in alpha_temp]
 
       logger.info('Average test time per mini-batch = {}'.format(
           np.mean(gen_run_time)))
 
 
-      graphs_gen = [get_graph(aa, node_pred[i]) for i, aa in enumerate(A_pred)]
+      graphs_gen = [get_graph(aa, node_pred[i], alpha_list[i]) for i, aa in enumerate(A_pred)]
 
     ### Visualize Generated Graphs
     if self.is_vis:
