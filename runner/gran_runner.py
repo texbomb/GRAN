@@ -298,7 +298,7 @@ class GranRunner(object):
             train_loss, adj_loss, losses = model(*batch_fwd)            
             avg_train_loss += train_loss 
             avg_adj_loss += adj_loss
-            for attribute in losses:
+            for attribute in self.config.attributes:
               exec('avg_' + attribute + '_loss += losses[attribute]')
             #avg_pos_loss += pos_loss 
         
@@ -310,17 +310,17 @@ class GranRunner(object):
         optimizer.step()
         avg_train_loss /= float(self.dataset_conf.num_fwd_pass)
         avg_adj_loss /= float(self.dataset_conf.num_fwd_pass)
-        for attribute in losses:
+        for attribute in self.config.attributes:
               exec('avg_' + attribute + '_loss /= float(self.dataset_conf.num_fwd_pass)')
         # reduce
         train_loss = float(avg_train_loss.data.cpu().numpy())
         adj_loss = float(avg_adj_loss.data.cpu().numpy())
-        for attribute in losses:
+        for attribute in self.config.attributes:
               exec('' + attribute + '_loss = float(avg_' + attribute + '_loss.data.cpu().numpy())')
         
         self.writer.add_scalar('train_loss', train_loss, iter_count)
         self.writer.add_scalar('adj_loss', adj_loss, iter_count) 
-        for attribute in losses:
+        for attribute in self.config.attributes:
               exec("self.writer.add_scalar('" + attribute + "_loss', " + attribute + "_loss, iter_count)")
          
         results['train_loss'] += [train_loss]
