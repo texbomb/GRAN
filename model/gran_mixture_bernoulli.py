@@ -678,8 +678,11 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
 
   t0 = truth['x'].expand(K,-1).T
   t1 = truth['y'].expand(K,-1).T
-  l0 = torch.sqrt(pos_loss_func(pred[0], t0) + EPS)
-  l1 = torch.sqrt(pos_loss_func(pred[1], t1) + EPS)
+  #l0 = torch.sqrt(pos_loss_func(pred[0], t0) )
+  #l1 = torch.sqrt(pos_loss_func(pred[1], t1) )
+
+  l0 = pos_loss_func(pred[0], t0) 
+  l1 = pos_loss_func(pred[1], t1) 
 
 
   reduce_l0 = torch.zeros(num_subgraph, K).to(label.device)
@@ -706,7 +709,7 @@ def one_dimensional_loss(pred, truth, pos_loss_func, log_alpha, log_theta, adj_l
   reduce_log_alpha = F.log_softmax(reduce_log_alpha, -1)
 
   #Calculate loss, where alpha is optimized
-  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha # - 100 * reduce_length - 10 * reduce_bearing
+  log_prob = -reduce_adj_loss - 50*reduce_l0 - 50*reduce_l1 + reduce_log_alpha # - 500 * reduce_length - 50 * reduce_bearing
   log_prob = torch.logsumexp(log_prob, dim=1)
   prob_loss = -log_prob.sum() / float(pred[0].shape[0])
 
