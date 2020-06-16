@@ -128,8 +128,8 @@ def draw_graph_list_separate(G_list,
     y_max = max(y_pos)
 
     plt.draw()
-    plt.xlim(x_min*0.6, x_max*1.2)
-    plt.ylim(y_min*0.6, y_max*1.2)
+    plt.xlim(x_min*1.2, x_max*1.2)
+    plt.ylim(y_min*1.2, y_max*1.2)
     plt.tight_layout()
     plt.savefig(fname+'_{:03d}.png'.format(i), dpi=300)
     plt.close()
