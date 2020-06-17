@@ -278,6 +278,8 @@ class GRANMixtureBernoulli(nn.Module):
     A = torch.zeros(B, N_pad, N_pad).to(self.device)
     dim_input = self.embedding_dim if self.dimension_reduce else self.max_num_nodes
 
+    alpha_list = torch.zeros(B, N_pad)
+
     ### cache node state for speed up
     node_state = torch.zeros(B, N_pad, dim_input).to(self.device)
 
@@ -357,6 +359,8 @@ class GRANMixtureBernoulli(nn.Module):
       prob_alpha = log_alpha.mean(dim=1).exp()      
       alpha = torch.multinomial(prob_alpha, 1).squeeze(dim=1).long()
 
+      alpha_list[:,ii:jj] = alpha.view(B,-1)
+
       prob = []
       for bb in range(B):
         prob += [torch.sigmoid(log_theta[bb, :, :, alpha[bb]])]
@@ -369,7 +373,7 @@ class GRANMixtureBernoulli(nn.Module):
       A = torch.tril(A, diagonal=-1)
       A = A + A.transpose(1, 2)
 
-    return A
+    return A, alpha_list
 
   def forward(self, input_dict):
     """
@@ -442,7 +446,7 @@ class GRANMixtureBernoulli(nn.Module):
 
       return adj_loss
     else:
-      A = self._sampling(batch_size)
+      A, alpha_list = self._sampling(batch_size)
 
       ### sample number of nodes
       num_nodes_pmf = torch.from_numpy(num_nodes_pmf).to(self.device)
@@ -452,7 +456,10 @@ class GRANMixtureBernoulli(nn.Module):
       A_list = [
           A[ii, :num_nodes[ii], :num_nodes[ii]] for ii in range(batch_size)
       ]
-      return A_list
+      alpha_list = [
+          alpha_list[ii, :num_nodes[ii]] for ii in range(batch_size)
+      ]
+      return A_list, alpha_list
 
 
 def mixture_bernoulli_loss(label, log_theta, log_alpha, adj_loss_func,

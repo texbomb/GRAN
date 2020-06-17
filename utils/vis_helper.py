@@ -82,25 +82,31 @@ def draw_graph_list_separate(G_list,
       pos = nx.spectral_layout(G)
 
     if is_single:
+      #color map
+      node_cat = list(nx.get_node_attributes(G, 'alpha').values())
       # node_size default 60, edge_width default 1.5
       nx.draw_networkx_nodes(
           G,
           pos,
           node_size=node_size,
-          node_color='#336699',
+          node_color=node_cat,
+          cmap=plt.cm.tab20,
           alpha=1,
           linewidths=0,
-          font_size=0)
+          font_size=0)      
       nx.draw_networkx_edges(G, pos, alpha=alpha, width=width)
     else:
+      node_cat = list(nx.get_node_attributes(G, 'alpha').values())
       nx.draw_networkx_nodes(
           G,
           pos,
           node_size=1.5,
-          node_color='#336699',
+          node_color=node_cat,
+          cmap=plt.cm.tab20,
           alpha=1,
           linewidths=0.2,
-          font_size=1.5)
+          font_size=1.5
+          )
       nx.draw_networkx_edges(G, pos, alpha=0.3, width=0.2)
 
     plt.draw()

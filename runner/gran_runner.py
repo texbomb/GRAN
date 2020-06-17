@@ -56,14 +56,25 @@ def compute_edge_ratio(G_list):
   return ratio
 
 
-def get_graph(adj):
+def get_graph(adj, alpha_list):
   """ get a graph from zero-padded adj """
   # remove all zeros rows and columns
   adj = adj[~np.all(adj == 0, axis=1)]
   adj = adj[:, ~np.all(adj == 0, axis=0)]
   adj = np.asmatrix(adj)
   G = nx.from_numpy_matrix(adj)
+  
+  dict_alpha = alpha_list_to_dict(alpha_list)
+
+  nx.set_node_attributes(G, dict_alpha)
   return G
+
+def alpha_list_to_dict(alpha_list):
+    """converts alpha_list list to dict """
+    dict_alpha_list = {}
+    for i, p in enumerate(alpha_list.astype(np.int16)):
+        dict_alpha_list[i] = {"alpha": p}
+    return dict_alpha_list
 
 
 def evaluate(graph_gt, graph_pred, degree_only=True):
@@ -295,6 +306,7 @@ class GranRunner(object):
       ### Generate Graphs
       A_pred = []
       num_nodes_pred = []
+      alpha_list = []
       num_test_batch = int(np.ceil(self.num_test_gen / self.test_conf.batch_size))
 
       gen_run_time = []
@@ -305,15 +317,16 @@ class GranRunner(object):
           input_dict['is_sampling']=True
           input_dict['batch_size']=self.test_conf.batch_size
           input_dict['num_nodes_pmf']=self.num_nodes_pmf_train
-          A_tmp = model(input_dict)
+          A_tmp, alpha_temp = model(input_dict)
           gen_run_time += [time.time() - start_time]
           A_pred += [aa.data.cpu().numpy() for aa in A_tmp]
           num_nodes_pred += [aa.shape[0] for aa in A_tmp]
+          alpha_list += [aa.data.cpu().numpy() for aa in alpha_temp]
 
       logger.info('Average test time per mini-batch = {}'.format(
           np.mean(gen_run_time)))
           
-      graphs_gen = [get_graph(aa) for aa in A_pred]
+      graphs_gen = [get_graph(aa, alpha_list[i]) for i, aa in enumerate(A_pred)]
 
     ### Visualize Generated Graphs
     if self.is_vis:
